@@ -9,6 +9,7 @@ import (
 const v = 1
 
 type Payload struct {
+	_msgpack   struct{} `msgpack:",omitempty"`
 	Expiration time.Time
 	Value      []byte
 	Header     http.Header
