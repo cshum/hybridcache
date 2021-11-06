@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+const v = 1
+
 type Payload struct {
 	Expiration time.Time
 	Value      []byte
@@ -17,7 +19,7 @@ type Payload struct {
 func NewPayload(value []byte) *Payload {
 	return &Payload{
 		Value: value,
-		V:     1,
+		V:     v,
 	}
 }
 
@@ -37,7 +39,7 @@ func (p Payload) IsExpired() bool {
 }
 
 func (p Payload) IsValid() bool {
-	return p.V == 1
+	return p.V == v
 }
 
 func SetPayload(c Cache, key string, payload *Payload, ttl time.Duration) error {
