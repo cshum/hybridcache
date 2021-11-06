@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
+	"strings"
 	"time"
 )
 
@@ -14,7 +14,6 @@ type HTTP struct {
 	MaxSize        int64
 	CacheTimeout   time.Duration
 	CacheTTL       time.Duration
-	ContentType    string
 	Hasher         func(r *http.Request) string
 	AcceptRequest  func(r *http.Request) bool
 	AcceptResponse func(*http.Response) bool
@@ -28,22 +27,18 @@ func (h *HTTP) Middleware(next http.Handler) http.Handler {
 		}
 		var (
 			key    = r.RequestURI
-			header = w.Header()
 			ctx    = DetachContext(r.Context())
 			cancel = func() {}
 		)
 		if h.Hasher != nil {
 			key = h.Hasher(r)
 		}
-		if val, ok, err := GetWithOk(h.Cache, key); err == nil {
-			if h.ContentType != "" {
-				header.Set("Content-Type", h.ContentType)
-			}
-			header.Set("Content-Length", strconv.Itoa(len(val)))
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write(val)
+		if v, err := GetPayload(h.Cache, key); err == nil {
+			overrideHeader(w.Header(), v.Header)
+			w.WriteHeader(v.StatusCode)
+			_, _ = w.Write(v.Value)
 
-			if !ok {
+			if v.IsExpired() {
 				if h.RequestTimeout > 0 {
 					ctx, cancel = context.WithTimeout(ctx, h.RequestTimeout)
 				}
@@ -56,7 +51,9 @@ func (h *HTTP) Middleware(next http.Handler) http.Handler {
 					if !h.acceptResponse(res) {
 						return
 					}
-					_ = SetWithTimeout(h.Cache, key, ww.Body.Bytes(), h.CacheTimeout, h.CacheTTL)
+					_ = SetPayload(h.Cache, key, NewPayload(ww.Body.Bytes()).
+						WithHeader(res.Header, res.StatusCode).
+						WithTimeout(h.CacheTimeout), h.CacheTTL)
 				}()
 			}
 			return
@@ -69,10 +66,7 @@ func (h *HTTP) Middleware(next http.Handler) http.Handler {
 		next.ServeHTTP(ww, r)
 		res := ww.Result()
 		val := ww.Body.Bytes()
-		if h.ContentType != "" {
-			header.Set("Content-Type", h.ContentType)
-		}
-		w.Header().Set("Content-Length", strconv.Itoa(len(val)))
+		overrideHeader(w.Header(), res.Header)
 		w.WriteHeader(res.StatusCode)
 		_, _ = w.Write(val)
 
@@ -80,16 +74,22 @@ func (h *HTTP) Middleware(next http.Handler) http.Handler {
 			return
 		}
 		go func() {
-			_ = SetWithTimeout(h.Cache, key, val, h.CacheTimeout, h.CacheTTL)
+			_ = SetPayload(
+				h.Cache, key, NewPayload(val).
+					WithHeader(res.Header, res.StatusCode).
+					WithTimeout(h.CacheTimeout), h.CacheTTL)
 		}()
 	})
 }
 
+func overrideHeader(dest, source http.Header) {
+	for k, v := range source {
+		dest.Set(k, strings.Join(v, ","))
+	}
+}
+
 func (h *HTTP) acceptResponse(res *http.Response) (ok bool) {
 	if h.AcceptResponse != nil && !h.AcceptResponse(res) {
-		return
-	}
-	if h.ContentType != "" && h.ContentType != res.Header.Get("Content-Type") {
 		return
 	}
 	if h.MaxSize > 0 && res.ContentLength > h.MaxSize {

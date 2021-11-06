@@ -9,12 +9,12 @@ func Func(
 	fn func() ([]byte, error),
 	timeout, ttl time.Duration,
 ) (value []byte, err error) {
-	if val, ok, err_ := GetWithOk(c, key); err_ == nil {
-		value = val
-		if !ok {
+	if v, err_ := GetPayload(c, key); err_ == nil {
+		value = v.Value
+		if v.IsExpired() {
 			go func() {
 				if val, err := fn(); err == nil {
-					_ = SetWithTimeout(c, key, val, timeout, ttl)
+					_ = SetPayload(c, key, NewPayload(val).WithTimeout(timeout), ttl)
 				}
 			}()
 		}
@@ -24,7 +24,7 @@ func Func(
 		return
 	}
 	go func() {
-		_ = SetWithTimeout(c, key, value, timeout, ttl)
+		_ = SetPayload(c, key, NewPayload(value).WithTimeout(timeout), ttl)
 	}()
 	return
 }
