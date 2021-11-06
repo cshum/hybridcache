@@ -6,14 +6,6 @@ import (
 	"time"
 )
 
-func GetWithTime(c Cache, key string) (value []byte, ts time.Time, err error) {
-	val, err := c.Get(key)
-	if err != nil {
-		return
-	}
-	return TimeDecode(val)
-}
-
 func GetWithOk(c Cache, key string) (value []byte, ok bool, err error) {
 	val, err := c.Get(key)
 	if err != nil {
@@ -24,10 +16,6 @@ func GetWithOk(c Cache, key string) (value []byte, ok bool, err error) {
 		return
 	}
 	return val, !time.Now().After(ts), nil
-}
-
-func SetWithTime(c Cache, key string, value []byte, ts time.Time, ttl time.Duration) error {
-	return c.Set(key, TimeEncode(value, ts), ttl)
 }
 
 func SetWithTimeout(c Cache, key string, value []byte, timeout, ttl time.Duration) error {
