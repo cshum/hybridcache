@@ -33,3 +33,11 @@ func (r *Redis) Set(key string, value []byte, ttl time.Duration) error {
 	_, err := c.Do("PSETEX", r.Prefix+key, toMilliseconds(ttl), value)
 	return err
 }
+
+func toMilliseconds(d time.Duration) int64 {
+	return int64(d / time.Millisecond)
+}
+
+func fromMilliseconds(pTTL int64) time.Duration {
+	return time.Duration(pTTL) * time.Millisecond
+}
