@@ -15,7 +15,6 @@ type HTTP struct {
 	CacheTimeout   time.Duration
 	CacheTTL       time.Duration
 	ContentType    string
-	Prefix         string
 	Hasher         func(r *http.Request) string
 	AcceptRequest  func(r *http.Request) bool
 	AcceptResponse func(*http.Response) bool
@@ -28,11 +27,14 @@ func (h *HTTP) Middleware(next http.Handler) http.Handler {
 			return
 		}
 		var (
-			key    = h.Prefix + h.Hasher(r)
+			key    = r.RequestURI
 			header = w.Header()
 			ctx    = DetachContext(r.Context())
 			cancel = func() {}
 		)
+		if h.Hasher != nil {
+			key = h.Hasher(r)
+		}
 		if val, ok, err := GetWithOk(h.Cache, key); err == nil {
 			if h.ContentType != "" {
 				header.Set("Content-Type", h.ContentType)
