@@ -11,11 +11,13 @@ type Payload struct {
 	Value      []byte
 	Header     http.Header
 	StatusCode int
+	V          int
 }
 
 func NewPayload(value []byte) *Payload {
 	return &Payload{
 		Value: value,
+		V:     1,
 	}
 }
 
@@ -34,6 +36,10 @@ func (p Payload) IsExpired() bool {
 	return time.Now().After(p.Expiration)
 }
 
+func (p Payload) IsValid() bool {
+	return p.V == 1
+}
+
 func SetPayload(c Cache, key string, payload *Payload, ttl time.Duration) error {
 	b, err := msgpack.Marshal(payload)
 	if err != nil {
@@ -49,6 +55,11 @@ func GetPayload(c Cache, key string) (payload *Payload, err error) {
 	}
 	payload = &Payload{}
 	if err = msgpack.Unmarshal(val, payload); err != nil {
+		return
+	}
+	if !payload.IsValid() {
+		err = NotFound
+		payload = nil
 		return
 	}
 	return
