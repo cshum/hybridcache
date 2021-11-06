@@ -7,10 +7,8 @@ import (
 )
 
 type Memory struct {
-	Cache    *ristretto.Cache
-	MaxItems int64
-	MaxSize  int64
-	MaxTTL   time.Duration
+	Cache  *ristretto.Cache
+	MaxTTL time.Duration
 }
 
 func NewMemory(maxItems, maxSize int64, maxTTL time.Duration) *Memory {
@@ -23,10 +21,8 @@ func NewMemory(maxItems, maxSize int64, maxTTL time.Duration) *Memory {
 		panic(err)
 	}
 	return &Memory{
-		Cache:    c,
-		MaxItems: maxItems,
-		MaxSize:  maxSize,
-		MaxTTL:   maxTTL,
+		Cache:  c,
+		MaxTTL: maxTTL,
 	}
 }
 
