@@ -36,8 +36,8 @@ func DoTestCache(t *testing.T, c Cache) {
 	time.Sleep(time.Millisecond)
 }
 
-func TestLocal(t *testing.T) {
-	DoTestCache(t, NewLocal(10, int64(10<<20), -1))
+func TestMemory(t *testing.T) {
+	DoTestCache(t, NewMemory(10, int64(10<<20), -1))
 }
 
 func TestRedis(t *testing.T) {
@@ -53,7 +53,7 @@ func TestHybrid(t *testing.T) {
 		Dial: func() (conn redis.Conn, err error) {
 			return redis.Dial("tcp", ":6379")
 		},
-	}, NewLocal(10, int64(10<<20), time.Minute*1)))
+	}, NewMemory(10, int64(10<<20), time.Minute*1)))
 }
 
 func TestHybridRedis(t *testing.T) {
@@ -61,5 +61,5 @@ func TestHybridRedis(t *testing.T) {
 		Dial: func() (conn redis.Conn, err error) {
 			return redis.Dial("tcp", ":6379")
 		},
-	}, NewLocal(10, int64(10<<20), time.Nanosecond)))
+	}, NewMemory(10, int64(10<<20), time.Nanosecond)))
 }

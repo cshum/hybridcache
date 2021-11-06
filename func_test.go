@@ -8,7 +8,7 @@ import (
 )
 
 func TestFunc(t *testing.T) {
-	c := NewLocal(10, int64(10<<20), -1)
+	c := NewMemory(10, int64(10<<20), -1)
 	if val, err := Func(c, "a", func() ([]byte, error) {
 		return []byte("b"), nil
 	}, time.Nanosecond, time.Minute); err != nil || string(val) != "b" {

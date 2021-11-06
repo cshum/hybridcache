@@ -6,14 +6,14 @@ import (
 	"github.com/dgraph-io/ristretto"
 )
 
-type Local struct {
+type Memory struct {
 	Cache    *ristretto.Cache
 	MaxItems int64
 	MaxSize  int64
 	MaxTTL   time.Duration
 }
 
-func NewLocal(maxItems, maxSize int64, maxTTL time.Duration) *Local {
+func NewMemory(maxItems, maxSize int64, maxTTL time.Duration) *Memory {
 	c, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: maxItems * 10,
 		MaxCost:     maxSize,
@@ -22,7 +22,7 @@ func NewLocal(maxItems, maxSize int64, maxTTL time.Duration) *Local {
 	if err != nil {
 		panic(err)
 	}
-	return &Local{
+	return &Memory{
 		Cache:    c,
 		MaxItems: maxItems,
 		MaxSize:  maxSize,
@@ -30,14 +30,14 @@ func NewLocal(maxItems, maxSize int64, maxTTL time.Duration) *Local {
 	}
 }
 
-func (c *Local) Get(key string) ([]byte, error) {
+func (c *Memory) Get(key string) ([]byte, error) {
 	if res, ok := c.Cache.Get(key); ok {
 		return res.([]byte), nil
 	}
 	return nil, NotFound
 }
 
-func (c *Local) Set(key string, value []byte, ttl time.Duration) error {
+func (c *Memory) Set(key string, value []byte, ttl time.Duration) error {
 	if c.MaxTTL > 0 && ttl > c.MaxTTL {
 		ttl = c.MaxTTL
 	}
