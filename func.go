@@ -14,7 +14,7 @@ func Func(
 		if v.IsExpired() {
 			go func() {
 				if val, err := fn(); err == nil {
-					_ = SetPayload(c, key, NewPayload(val).WithTimeout(timeout), ttl)
+					_ = SetPayload(c, key, NewPayload(val, timeout), ttl)
 				}
 			}()
 		}
@@ -24,7 +24,7 @@ func Func(
 		return
 	}
 	go func() {
-		_ = SetPayload(c, key, NewPayload(value).WithTimeout(timeout), ttl)
+		_ = SetPayload(c, key, NewPayload(value, timeout), ttl)
 	}()
 	return
 }

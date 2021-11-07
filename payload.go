@@ -17,21 +17,17 @@ type Payload struct {
 	V          int
 }
 
-func NewPayload(value []byte) *Payload {
+func NewPayload(value []byte, timeout time.Duration) *Payload {
 	return &Payload{
-		Value: value,
-		V:     v,
+		Value:      value,
+		Expiration: time.Now().Add(timeout),
+		V:          v,
 	}
 }
 
 func (p *Payload) WithHeader(header http.Header, status int) *Payload {
 	p.Header = header
 	p.StatusCode = status
-	return p
-}
-
-func (p *Payload) WithTimeout(timeout time.Duration) *Payload {
-	p.Expiration = time.Now().Add(timeout)
 	return p
 }
 

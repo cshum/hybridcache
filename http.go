@@ -51,9 +51,8 @@ func (h *HTTP) Middleware(next http.Handler) http.Handler {
 					if !h.acceptResponse(res) {
 						return
 					}
-					_ = SetPayload(h.Cache, key, NewPayload(ww.Body.Bytes()).
-						WithHeader(res.Header, res.StatusCode).
-						WithTimeout(h.CacheTimeout), h.CacheTTL)
+					_ = SetPayload(h.Cache, key, NewPayload(ww.Body.Bytes(), h.CacheTimeout).
+						WithHeader(res.Header, res.StatusCode), h.CacheTTL)
 				}()
 			}
 			return
@@ -75,9 +74,8 @@ func (h *HTTP) Middleware(next http.Handler) http.Handler {
 		}
 		go func() {
 			_ = SetPayload(
-				h.Cache, key, NewPayload(val).
-					WithHeader(res.Header, res.StatusCode).
-					WithTimeout(h.CacheTimeout), h.CacheTTL)
+				h.Cache, key, NewPayload(val, h.CacheTimeout).
+					WithHeader(res.Header, res.StatusCode), h.CacheTTL)
 		}()
 	})
 }
