@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+type contextKey struct {
+	name string
+}
+
+var detachedCtxKey = &contextKey{"Detached"}
+
 type detached struct {
 	ctx context.Context
 }
@@ -26,5 +32,10 @@ func (d detached) Value(key interface{}) interface{} {
 }
 
 func DetachContext(ctx context.Context) context.Context {
-	return detached{ctx: ctx}
+	return context.WithValue(detached{ctx: ctx}, detachedCtxKey, true)
+}
+
+func IsContextDetached(ctx context.Context) bool {
+	_, ok := ctx.Value(detachedCtxKey).(bool)
+	return ok
 }
