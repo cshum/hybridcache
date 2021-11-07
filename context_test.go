@@ -9,7 +9,7 @@ import (
 func TestDetachContext(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
 	defer cancel()
-	if IsContextDetached(ctx) {
+	if IsDetached(ctx) {
 		t.Error("not detached ctx")
 	}
 	time.Sleep(time.Millisecond)
@@ -17,7 +17,7 @@ func TestDetachContext(t *testing.T) {
 	if err := ctx.Err(); err != nil {
 		t.Error(err)
 	}
-	if !IsContextDetached(ctx) {
+	if !IsDetached(ctx) {
 		t.Error("detached ctx")
 	}
 }

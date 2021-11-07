@@ -35,7 +35,7 @@ func DetachContext(ctx context.Context) context.Context {
 	return context.WithValue(detached{ctx: ctx}, detachedCtxKey, true)
 }
 
-func IsContextDetached(ctx context.Context) bool {
+func IsDetached(ctx context.Context) bool {
 	_, ok := ctx.Value(detachedCtxKey).(bool)
 	return ok
 }
