@@ -14,7 +14,7 @@ type HTTP struct {
 	FreshFor time.Duration
 	TTL      time.Duration
 
-	KeyHash          func(*http.Request) string
+	GetKey           func(*http.Request) string
 	IsHandleRequest  func(*http.Request) bool
 	IsHandleResponse func(*http.Response) bool
 }
@@ -30,8 +30,8 @@ func (h *HTTP) Handler(next http.Handler) http.Handler {
 			ctx    = DetachContext(r.Context())
 			cancel = func() {}
 		)
-		if h.KeyHash != nil {
-			key = h.KeyHash(r)
+		if h.GetKey != nil {
+			key = h.GetKey(r)
 		}
 		if v, err := getPayload(h.Cache, key); err == nil {
 			overrideHeader(w.Header(), v.Header)
@@ -95,7 +95,7 @@ func NewHTTP(c Cache, freshFor, ttl time.Duration) *HTTP {
 		Cache:    c,
 		FreshFor: freshFor,
 		TTL:      ttl,
-		KeyHash: func(r *http.Request) string {
+		GetKey: func(r *http.Request) string {
 			return r.RequestURI
 		},
 		IsHandleRequest: func(r *http.Request) bool {
