@@ -9,19 +9,19 @@ import (
 )
 
 type HTTP struct {
-	Cache          Cache
-	Timeout        time.Duration
-	MaxSize        int64
-	FreshFor       time.Duration
-	TTL            time.Duration
-	KeyHash        func(r *http.Request) string
-	AcceptRequest  func(r *http.Request) bool
-	AcceptResponse func(*http.Response) bool
+	Cache    Cache
+	Timeout  time.Duration
+	FreshFor time.Duration
+	TTL      time.Duration
+
+	KeyHash          func(r *http.Request) string
+	IsHandleRequest  func(r *http.Request) bool
+	IsHandleResponse func(*http.Response) bool
 }
 
-func (h *HTTP) Middleware(next http.Handler) http.Handler {
+func (h *HTTP) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if h.AcceptRequest != nil && !h.AcceptRequest(r) {
+		if h.IsHandleRequest != nil && !h.IsHandleRequest(r) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -48,7 +48,7 @@ func (h *HTTP) Middleware(next http.Handler) http.Handler {
 					ww := httptest.NewRecorder()
 					next.ServeHTTP(ww, rr)
 					res := ww.Result()
-					if !h.acceptResponse(res) {
+					if !h.isHandleResponse(res) {
 						return
 					}
 					_ = setPayload(h.Cache, key, newPayload(ww.Body.Bytes(), h.FreshFor).
@@ -69,7 +69,7 @@ func (h *HTTP) Middleware(next http.Handler) http.Handler {
 		w.WriteHeader(res.StatusCode)
 		_, _ = w.Write(val)
 
-		if !h.acceptResponse(res) {
+		if !h.isHandleResponse(res) {
 			return
 		}
 		go func() {
@@ -86,15 +86,8 @@ func overrideHeader(dest, source http.Header) {
 	}
 }
 
-func (h *HTTP) acceptResponse(res *http.Response) (ok bool) {
-	if h.AcceptResponse != nil && !h.AcceptResponse(res) {
-		return
-	}
-	if h.MaxSize > 0 && res.ContentLength > h.MaxSize {
-		return
-	}
-	ok = true
-	return
+func (h *HTTP) isHandleResponse(res *http.Response) (ok bool) {
+	return h.IsHandleResponse == nil || h.IsHandleResponse(res)
 }
 
 func NewHTTP(c Cache, freshFor, ttl time.Duration) *HTTP {
@@ -105,10 +98,10 @@ func NewHTTP(c Cache, freshFor, ttl time.Duration) *HTTP {
 		KeyHash: func(r *http.Request) string {
 			return r.RequestURI
 		},
-		AcceptRequest: func(r *http.Request) bool {
+		IsHandleRequest: func(r *http.Request) bool {
 			return r.Method == http.MethodGet
 		},
-		AcceptResponse: func(res *http.Response) bool {
+		IsHandleResponse: func(res *http.Response) bool {
 			return res.StatusCode < 400
 		},
 	}
