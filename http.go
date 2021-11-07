@@ -14,8 +14,8 @@ type HTTP struct {
 	FreshFor time.Duration
 	TTL      time.Duration
 
-	KeyHash          func(r *http.Request) string
-	IsHandleRequest  func(r *http.Request) bool
+	KeyHash          func(*http.Request) string
+	IsHandleRequest  func(*http.Request) bool
 	IsHandleResponse func(*http.Response) bool
 }
 

@@ -33,7 +33,6 @@ func DoTestCache(t *testing.T, c Cache) {
 	if v, err := c.Get("a"); v != nil || err != NotFound {
 		t.Error(v, err, "should value nil and err not found")
 	}
-	time.Sleep(time.Millisecond)
 }
 
 func TestMemory(t *testing.T) {
