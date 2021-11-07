@@ -10,11 +10,11 @@ import (
 
 type HTTP struct {
 	Cache          Cache
-	RequestTimeout time.Duration
+	Timeout        time.Duration
 	MaxSize        int64
-	CacheTimeout   time.Duration
-	CacheTTL       time.Duration
-	Hasher         func(r *http.Request) string
+	FreshFor       time.Duration
+	TTL            time.Duration
+	KeyHash        func(r *http.Request) string
 	AcceptRequest  func(r *http.Request) bool
 	AcceptResponse func(*http.Response) bool
 }
@@ -30,17 +30,17 @@ func (h *HTTP) Middleware(next http.Handler) http.Handler {
 			ctx    = DetachContext(r.Context())
 			cancel = func() {}
 		)
-		if h.Hasher != nil {
-			key = h.Hasher(r)
+		if h.KeyHash != nil {
+			key = h.KeyHash(r)
 		}
-		if v, err := GetPayload(h.Cache, key); err == nil {
+		if v, err := getPayload(h.Cache, key); err == nil {
 			overrideHeader(w.Header(), v.Header)
 			w.WriteHeader(v.StatusCode)
 			_, _ = w.Write(v.Value)
 
-			if v.IsExpired() {
-				if h.RequestTimeout > 0 {
-					ctx, cancel = context.WithTimeout(ctx, h.RequestTimeout)
+			if v.NeedRefresh() {
+				if h.Timeout > 0 {
+					ctx, cancel = context.WithTimeout(ctx, h.Timeout)
 				}
 				rr := r.WithContext(ctx)
 				go func() {
@@ -51,14 +51,14 @@ func (h *HTTP) Middleware(next http.Handler) http.Handler {
 					if !h.acceptResponse(res) {
 						return
 					}
-					_ = SetPayload(h.Cache, key, NewPayload(ww.Body.Bytes(), h.CacheTimeout).
-						WithHeader(res.Header, res.StatusCode), h.CacheTTL)
+					_ = setPayload(h.Cache, key, newPayload(ww.Body.Bytes(), h.FreshFor).
+						WithHeader(res.Header, res.StatusCode), h.TTL)
 				}()
 			}
 			return
 		}
-		if h.RequestTimeout > 0 {
-			ctx, cancel = context.WithTimeout(ctx, h.RequestTimeout)
+		if h.Timeout > 0 {
+			ctx, cancel = context.WithTimeout(ctx, h.Timeout)
 		}
 		defer cancel()
 		ww := httptest.NewRecorder()
@@ -73,9 +73,9 @@ func (h *HTTP) Middleware(next http.Handler) http.Handler {
 			return
 		}
 		go func() {
-			_ = SetPayload(
-				h.Cache, key, NewPayload(val, h.CacheTimeout).
-					WithHeader(res.Header, res.StatusCode), h.CacheTTL)
+			_ = setPayload(
+				h.Cache, key, newPayload(val, h.FreshFor).
+					WithHeader(res.Header, res.StatusCode), h.TTL)
 		}()
 	})
 }
@@ -97,12 +97,12 @@ func (h *HTTP) acceptResponse(res *http.Response) (ok bool) {
 	return
 }
 
-func NewHTTP(c Cache, timeout, ttl time.Duration) *HTTP {
+func NewHTTP(c Cache, freshFor, ttl time.Duration) *HTTP {
 	return &HTTP{
-		Cache:        c,
-		CacheTimeout: timeout,
-		CacheTTL:     ttl,
-		Hasher: func(r *http.Request) string {
+		Cache:    c,
+		FreshFor: freshFor,
+		TTL:      ttl,
+		KeyHash: func(r *http.Request) string {
 			return r.RequestURI
 		},
 		AcceptRequest: func(r *http.Request) bool {

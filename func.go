@@ -7,14 +7,14 @@ import (
 func Func(
 	c Cache, key string,
 	fn func() ([]byte, error),
-	timeout, ttl time.Duration,
+	freshFor, ttl time.Duration,
 ) (value []byte, err error) {
-	if v, err_ := GetPayload(c, key); err_ == nil {
+	if v, err_ := getPayload(c, key); err_ == nil {
 		value = v.Value
-		if v.IsExpired() {
+		if v.NeedRefresh() {
 			go func() {
 				if val, err := fn(); err == nil {
-					_ = SetPayload(c, key, NewPayload(val, timeout), ttl)
+					_ = setPayload(c, key, newPayload(val, freshFor), ttl)
 				}
 			}()
 		}
@@ -24,7 +24,7 @@ func Func(
 		return
 	}
 	go func() {
-		_ = SetPayload(c, key, NewPayload(value, timeout), ttl)
+		_ = setPayload(c, key, newPayload(value, freshFor), ttl)
 	}()
 	return
 }

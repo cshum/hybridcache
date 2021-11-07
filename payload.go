@@ -8,57 +8,57 @@ import (
 
 const v = 1
 
-type Payload struct {
+type payload struct {
 	_msgpack   struct{} `msgpack:",omitempty"`
-	Expiration time.Time
+	BestBefore time.Time
 	Value      []byte
 	Header     http.Header
 	StatusCode int
 	V          int
 }
 
-func NewPayload(value []byte, timeout time.Duration) *Payload {
-	return &Payload{
+func newPayload(value []byte, freshFor time.Duration) *payload {
+	return &payload{
 		Value:      value,
-		Expiration: time.Now().Add(timeout),
+		BestBefore: time.Now().Add(freshFor),
 		V:          v,
 	}
 }
 
-func (p *Payload) WithHeader(header http.Header, status int) *Payload {
+func (p *payload) WithHeader(header http.Header, status int) *payload {
 	p.Header = header
 	p.StatusCode = status
 	return p
 }
 
-func (p Payload) IsExpired() bool {
-	return time.Now().After(p.Expiration)
+func (p payload) NeedRefresh() bool {
+	return time.Now().After(p.BestBefore)
 }
 
-func (p Payload) IsValid() bool {
+func (p payload) IsValid() bool {
 	return p.V == v
 }
 
-func SetPayload(c Cache, key string, payload *Payload, ttl time.Duration) error {
-	b, err := msgpack.Marshal(payload)
+func setPayload(c Cache, key string, p *payload, ttl time.Duration) error {
+	b, err := msgpack.Marshal(p)
 	if err != nil {
 		return err
 	}
 	return c.Set(key, b, ttl)
 }
 
-func GetPayload(c Cache, key string) (payload *Payload, err error) {
+func getPayload(c Cache, key string) (p *payload, err error) {
 	val, err := c.Get(key)
 	if err != nil {
 		return
 	}
-	payload = &Payload{}
-	if err = msgpack.Unmarshal(val, payload); err != nil {
+	p = &payload{}
+	if err = msgpack.Unmarshal(val, p); err != nil {
 		return
 	}
-	if !payload.IsValid() {
+	if !p.IsValid() {
 		err = NotFound
-		payload = nil
+		p = nil
 		return
 	}
 	return
