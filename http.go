@@ -44,6 +44,11 @@ func (h *HTTP) Handler(next http.Handler) http.Handler {
 				}
 				rr := r.WithContext(ctx)
 				go func() {
+					defer func() {
+						if err := recover(); err != nil {
+							// todo log panic
+						}
+					}()
 					defer cancel()
 					ww := httptest.NewRecorder()
 					next.ServeHTTP(ww, rr)

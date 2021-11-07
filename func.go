@@ -25,6 +25,11 @@ func (f *Func) Do(
 				ctx, cancel = context.WithTimeout(ctx, f.Timeout)
 			}
 			go func() {
+				defer func() {
+					if err := recover(); err != nil {
+						// todo log panic
+					}
+				}()
 				defer cancel()
 				if val, err := fn(ctx); err == nil {
 					_ = setPayload(f.Cache, key, newPayload(val, f.FreshFor), f.TTL)
