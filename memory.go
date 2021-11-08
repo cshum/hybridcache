@@ -33,7 +33,7 @@ func (c *Memory) Get(key string) ([]byte, error) {
 	return nil, NotFound
 }
 
-func (c *Memory) GetUpstream(key string) ([]byte, error) {
+func (c *Memory) Fetch(key string) ([]byte, error) {
 	return c.Get(key)
 }
 

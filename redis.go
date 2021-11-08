@@ -27,7 +27,7 @@ func (r *Redis) Get(key string) (res []byte, err error) {
 	return
 }
 
-func (r *Redis) GetUpstream(key string) ([]byte, error) {
+func (r *Redis) Fetch(key string) ([]byte, error) {
 	return r.Get(key)
 }
 

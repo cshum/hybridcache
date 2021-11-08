@@ -9,7 +9,7 @@ import (
 
 type Cache interface {
 	Get(key string) ([]byte, error)
-	GetUpstream(key string) ([]byte, error)
+	Fetch(key string) ([]byte, error)
 	Set(key string, value []byte, ttl time.Duration) error
 }
 
@@ -23,7 +23,7 @@ func do(
 	timeout, freshFor, ttl time.Duration,
 ) (p *payload, err error) {
 	var cancel = func() {}
-	if v, err_ := get(c, key, false); err_ == nil {
+	if v, err_ := get(c, key); err_ == nil {
 		p = v
 		if v.NeedRefresh() {
 			ctx = DetachContext(ctx)
@@ -42,7 +42,7 @@ func do(
 					err error
 				)
 				// todo stampede handling
-				if v, err_ := get(c, key, true); err_ == nil {
+				if v, err_ := fetch(c, key); err_ == nil {
 					if !v.NeedRefresh() {
 						return
 					}
@@ -96,16 +96,18 @@ func set(c Cache, key string, p *payload, ttl time.Duration) error {
 	return c.Set(key, b, ttl)
 }
 
-func get(c Cache, key string, upstream bool) (p *payload, err error) {
-	var val []byte
-	if upstream {
-		if val, err = c.GetUpstream(key); err != nil {
-			return
-		}
-	} else {
-		if val, err = c.Get(key); err != nil {
-			return
-		}
+func get(c Cache, key string) (p *payload, err error) {
+	return unmarshal(c.Get(key))
+}
+
+func fetch(c Cache, key string) (p *payload, err error) {
+	return unmarshal(c.Fetch(key))
+}
+
+func unmarshal(val []byte, e error) (p *payload, err error) {
+	if e != nil {
+		err = e
+		return
 	}
 	p = &payload{}
 	if err = msgpack.Unmarshal(val, p); err != nil {

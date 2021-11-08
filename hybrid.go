@@ -24,10 +24,10 @@ func (c *Hybrid) Get(key string) (value []byte, err error) {
 		value = val
 		return
 	}
-	return c.GetUpstream(key)
+	return c.Fetch(key)
 }
 
-func (c *Hybrid) GetUpstream(key string) (value []byte, err error) {
+func (c *Hybrid) Fetch(key string) (value []byte, err error) {
 	var conn = c.Pool.Get()
 	defer conn.Close()
 	if err = conn.Send("GET", c.Prefix+key); err != nil {
