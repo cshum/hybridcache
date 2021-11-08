@@ -38,10 +38,10 @@ func do(
 				defer cancel()
 				v, err := fn(ctx)
 				if err != nil {
+					if err == NoCache {
+						err = nil
+					}
 					return
-				}
-				if err == NoCache {
-					err = nil
 				}
 				if v != nil && v.IsValid() {
 					v.FreshFor(freshFor)
