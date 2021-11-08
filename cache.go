@@ -43,10 +43,12 @@ func do(
 					}
 					return
 				}
-				if v != nil && v.IsValid() {
-					v.FreshFor(freshFor)
-					_ = set(c, key, v, ttl)
+				if v == nil {
+					err = NotFound
+					return
 				}
+				v.FreshFor(freshFor)
+				_ = set(c, key, v, ttl)
 			}()
 		}
 		return
@@ -61,16 +63,21 @@ func do(
 		}
 		return
 	}
-	if p != nil && p.IsValid() {
-		p.FreshFor(freshFor)
-		go func() {
-			_ = set(c, key, p, ttl)
-		}()
+	if p == nil {
+		err = NotFound
+		return
 	}
+	p.FreshFor(freshFor)
+	go func() {
+		_ = set(c, key, p, ttl)
+	}()
 	return
 }
 
 func set(c Cache, key string, p *payload, ttl time.Duration) error {
+	if p == nil || !p.IsValid() {
+		return nil
+	}
 	b, err := msgpack.Marshal(p)
 	if err != nil {
 		return err
