@@ -21,67 +21,39 @@ type HTTP struct {
 
 func (h *HTTP) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var (
+			key = r.RequestURI
+			ctx = r.Context()
+			p   *payload
+			err error
+		)
 		if h.IsHandleRequest != nil && !h.IsHandleRequest(r) {
 			next.ServeHTTP(w, r)
 			return
 		}
-		var (
-			key    = r.RequestURI
-			ctx    = DetachContext(r.Context())
-			cancel = func() {}
-		)
 		if h.GetKey != nil {
 			key = h.GetKey(r)
 		}
-		if v, err := get(h.Cache, key); err == nil {
-			overrideHeader(w.Header(), v.Header)
-			w.WriteHeader(v.StatusCode)
-			_, _ = w.Write(v.Value)
-
-			if v.NeedRefresh() {
-				if h.Timeout > 0 {
-					ctx, cancel = context.WithTimeout(ctx, h.Timeout)
-				}
-				rr := r.WithContext(ctx)
-				go func() {
-					defer func() {
-						if err := recover(); err != nil {
-							// todo log panic
-						}
-					}()
-					defer cancel()
-					ww := httptest.NewRecorder()
-					next.ServeHTTP(ww, rr)
-					res := ww.Result()
-					if !h.isHandleResponse(res) {
-						return
-					}
-					_ = set(h.Cache, key, newPayload(ww.Body.Bytes()).FreshFor(h.FreshFor).
-						WithHeader(res.Header, res.StatusCode), h.TTL)
-				}()
+		if p, err = do(ctx, h.Cache, key, func(ctx context.Context) (p *payload, err error) {
+			var (
+				ww  = httptest.NewRecorder()
+				rr  = r.WithContext(ctx)
+				res *http.Response
+			)
+			next.ServeHTTP(ww, rr)
+			res = ww.Result()
+			p = newPayload(ww.Body.Bytes()).WithHeader(res.Header, res.StatusCode)
+			if !h.isHandleResponse(res) {
+				p.Discard()
 			}
 			return
-		}
-		if h.Timeout > 0 {
-			ctx, cancel = context.WithTimeout(ctx, h.Timeout)
-		}
-		defer cancel()
-		ww := httptest.NewRecorder()
-		next.ServeHTTP(ww, r)
-		res := ww.Result()
-		val := ww.Body.Bytes()
-		overrideHeader(w.Header(), res.Header)
-		w.WriteHeader(res.StatusCode)
-		_, _ = w.Write(val)
-
-		if !h.isHandleResponse(res) {
+		}, h.Timeout, h.FreshFor, h.TTL); err != nil || p == nil {
+			next.ServeHTTP(w, r)
 			return
 		}
-		go func() {
-			_ = set(
-				h.Cache, key, newPayload(val).FreshFor(h.FreshFor).
-					WithHeader(res.Header, res.StatusCode), h.TTL)
-		}()
+		overrideHeader(w.Header(), p.Header)
+		w.WriteHeader(p.StatusCode)
+		_, _ = w.Write(p.Value)
 	})
 }
 
