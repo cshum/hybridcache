@@ -19,10 +19,12 @@ func NewHybrid(redis *redis.Pool, cache Cache) *Hybrid {
 	}
 }
 
-func (c *Hybrid) Get(key string) (value []byte, err error) {
-	if val, err_ := c.Cache.Get(key); err_ == nil {
-		value = val
-		return
+func (c *Hybrid) get(key string, fromFresh bool) (value []byte, err error) {
+	if !fromFresh {
+		if val, err_ := c.Cache.Get(key); err_ == nil {
+			value = val
+			return
+		}
 	}
 	var conn = c.Pool.Get()
 	defer conn.Close()
@@ -52,6 +54,14 @@ func (c *Hybrid) Get(key string) (value []byte, err error) {
 		}
 	}
 	return
+}
+
+func (c *Hybrid) Get(key string) (value []byte, err error) {
+	return c.get(key, false)
+}
+
+func (c *Hybrid) GetFresh(key string) ([]byte, error) {
+	return c.get(key, true)
 }
 
 func (c *Hybrid) Set(key string, value []byte, ttl time.Duration) error {

@@ -27,6 +27,10 @@ func (r *Redis) Get(key string) (res []byte, err error) {
 	return
 }
 
+func (r *Redis) GetFresh(key string) ([]byte, error) {
+	return r.Get(key)
+}
+
 func (r *Redis) Set(key string, value []byte, ttl time.Duration) error {
 	var c = r.Pool.Get()
 	defer c.Close()

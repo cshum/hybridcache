@@ -9,6 +9,7 @@ import (
 
 type Cache interface {
 	Get(key string) ([]byte, error)
+	GetFresh(key string) ([]byte, error)
 	Set(key string, value []byte, ttl time.Duration) error
 }
 

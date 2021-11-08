@@ -33,6 +33,10 @@ func (c *Memory) Get(key string) ([]byte, error) {
 	return nil, NotFound
 }
 
+func (c *Memory) GetFresh(key string) ([]byte, error) {
+	return c.Get(key)
+}
+
 func (c *Memory) Set(key string, value []byte, ttl time.Duration) error {
 	if c.MaxTTL > 0 && ttl > c.MaxTTL {
 		ttl = c.MaxTTL
