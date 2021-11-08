@@ -41,7 +41,7 @@ func (f Func) Do(
 	v interface{},
 ) (err error) {
 	var p *payload
-	if p, err = do(ctx, f.Cache, key, func(ctx context.Context) (p *payload, err error) {
+	var pfn = func(ctx context.Context) (p *payload, err error) {
 		var (
 			v interface{}
 			b []byte
@@ -49,24 +49,40 @@ func (f Func) Do(
 		if v, err = fn(ctx); err != nil {
 			return
 		}
-		if f.Marshal != nil {
-			if b, err = f.Marshal(v); err != nil {
-				return
-			}
-		} else {
-			if b, err = msgpack.Marshal(v); err != nil {
-				return
-			}
+		if b, err = f.marshal(v); err != nil {
+			return
 		}
 		p = newPayload(b)
 		return
-	}, f.Timeout, f.FreshFor, f.TTL); err != nil {
+	}
+	if p, err = do(ctx, f.Cache, key, pfn, f.Timeout, f.FreshFor, f.TTL); err != nil {
 		return
 	}
-	if f.Unmarshal != nil {
-		return f.Unmarshal(p.Value, v)
+	if err = f.unmarshal(p.Value, v); err != nil {
+		// cache payload valid but value corrupted, get live and try once more
+		if p, err = doMiss(ctx, f.Cache, key, pfn, f.Timeout, f.FreshFor, f.TTL); err != nil {
+			return
+		}
+		if err = f.unmarshal(p.Value, v); err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (f Func) marshal(v interface{}) (b []byte, err error) {
+	if f.Marshal != nil {
+		return f.Marshal(v)
 	} else {
-		return msgpack.Unmarshal(p.Value, v)
+		return msgpack.Marshal(v)
+	}
+}
+
+func (f Func) unmarshal(b []byte, v interface{}) (err error) {
+	if f.Unmarshal != nil {
+		return f.Unmarshal(b, v)
+	} else {
+		return msgpack.Unmarshal(b, v)
 	}
 }
 

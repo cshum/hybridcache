@@ -64,6 +64,16 @@ func do(
 		}
 		return
 	}
+	return doMiss(ctx, c, key, fn, timeout, freshFor, ttl)
+}
+
+func doMiss(
+	ctx context.Context,
+	c Cache, key string,
+	fn func(context.Context) (*payload, error),
+	timeout, freshFor, ttl time.Duration,
+) (p *payload, err error) {
+	var cancel = func() {}
 	if timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, timeout)
 	}

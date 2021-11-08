@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -47,5 +48,13 @@ func TestFunc(t *testing.T) {
 			t.Error(val, err)
 		}
 		time.Sleep(time.Millisecond)
+	}
+	// cached value corrupted
+	fn1.Marshal = json.Marshal
+	fn1.Unmarshal = json.Unmarshal
+	if err = fn1.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
+		return "asdf", nil
+	}, &val); err != nil || val != "asdf" {
+		t.Error(val, err)
 	}
 }
