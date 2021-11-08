@@ -14,9 +14,9 @@ type HTTP struct {
 	FreshFor time.Duration
 	TTL      time.Duration
 
-	GetKey           func(*http.Request) string
-	IsHandleRequest  func(*http.Request) bool
-	IsHandleResponse func(*http.Response) bool
+	GetKey          func(*http.Request) string
+	IsHandleRequest func(*http.Request) bool
+	IsNoCache       func(*http.Response) bool
 }
 
 func (h *HTTP) Handler(next http.Handler) http.Handler {
@@ -43,7 +43,7 @@ func (h *HTTP) Handler(next http.Handler) http.Handler {
 			next.ServeHTTP(ww, rr)
 			res = ww.Result()
 			p = newPayload(ww.Body.Bytes()).WithHeader(res.Header, res.StatusCode)
-			if !h.isHandleResponse(res) {
+			if h.IsNoCache != nil && h.IsNoCache(res) {
 				err = NoCache
 			}
 			return
@@ -63,10 +63,6 @@ func overrideHeader(dest, source http.Header) {
 	}
 }
 
-func (h *HTTP) isHandleResponse(res *http.Response) (ok bool) {
-	return h.IsHandleResponse == nil || h.IsHandleResponse(res)
-}
-
 func NewHTTP(c Cache, freshFor, ttl time.Duration) *HTTP {
 	return &HTTP{
 		Cache:    c,
@@ -78,7 +74,7 @@ func NewHTTP(c Cache, freshFor, ttl time.Duration) *HTTP {
 		IsHandleRequest: func(r *http.Request) bool {
 			return r.Method == http.MethodGet
 		},
-		IsHandleResponse: func(res *http.Response) bool {
+		IsNoCache: func(res *http.Response) bool {
 			return res.StatusCode < 400
 		},
 	}
