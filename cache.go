@@ -8,8 +8,7 @@ import (
 )
 
 type Cache interface {
-	Get(key string) ([]byte, error)
-	GetUpstream(key string) ([]byte, error)
+	Get(key string, upstreamOnly bool) ([]byte, error)
 	Set(key string, value []byte, ttl time.Duration) error
 }
 
@@ -23,7 +22,7 @@ func do(
 	timeout, freshFor, ttl time.Duration,
 ) (p *payload, err error) {
 	var cancel = func() {}
-	if v, err_ := get(c, key); err_ == nil {
+	if v, err_ := get(c, key, false); err_ == nil {
 		p = v
 		if v.NeedRefresh() {
 			ctx = DetachContext(ctx)
@@ -37,7 +36,17 @@ func do(
 					}
 				}()
 				defer cancel()
-				v, err := fn(ctx)
+				var (
+					v   *payload
+					err error
+				)
+				// todo stampede handling
+				if v, err_ := get(c, key, true); err_ == nil {
+					if !v.NeedRefresh() {
+						return
+					}
+				}
+				v, err = fn(ctx)
 				if err != nil {
 					if err == NoCache {
 						err = nil
@@ -86,9 +95,9 @@ func set(c Cache, key string, p *payload, ttl time.Duration) error {
 	return c.Set(key, b, ttl)
 }
 
-func get(c Cache, key string) (p *payload, err error) {
-	val, err := c.Get(key)
-	if err != nil {
+func get(c Cache, key string, upstreamOnly bool) (p *payload, err error) {
+	var val []byte
+	if val, err = c.Get(key, upstreamOnly); err != nil {
 		return
 	}
 	p = &payload{}

@@ -9,11 +9,11 @@ import (
 
 func DoTestCache(t *testing.T, c Cache) {
 	// not found
-	if v, err := c.Get("a"); v != nil || err != NotFound {
+	if v, err := c.Get("a", false); v != nil || err != NotFound {
 		t.Error(err, "should value nil and err not found")
 	}
 	time.Sleep(time.Millisecond)
-	if v, err := c.Get("a"); v != nil || err != NotFound {
+	if v, err := c.Get("a", false); v != nil || err != NotFound {
 		t.Error(err, "should value nil and err not found")
 	}
 	time.Sleep(time.Millisecond)
@@ -22,15 +22,15 @@ func DoTestCache(t *testing.T, c Cache) {
 		t.Error(err)
 	}
 	time.Sleep(time.Millisecond)
-	if v, err := c.Get("a"); string(v) != "b" || err != nil {
+	if v, err := c.Get("a", false); string(v) != "b" || err != nil {
 		t.Error(err, "should value and no error")
 	}
 	time.Sleep(time.Millisecond)
-	if v, err := c.Get("a"); string(v) != "b" || err != nil {
+	if v, err := c.Get("a", false); string(v) != "b" || err != nil {
 		t.Error(err, "should value and no error")
 	}
 	time.Sleep(time.Second * 1)
-	if v, err := c.Get("a"); v != nil || err != NotFound {
+	if v, err := c.Get("a", false); v != nil || err != NotFound {
 		t.Error(v, err, "should value nil and err not found")
 	}
 }

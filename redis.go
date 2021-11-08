@@ -17,7 +17,7 @@ func NewRedis(pool *redis.Pool) *Redis {
 	}
 }
 
-func (r *Redis) Get(key string) (res []byte, err error) {
+func (r *Redis) Get(key string, _ bool) (res []byte, err error) {
 	var c = r.Pool.Get()
 	defer c.Close()
 	res, err = redis.Bytes(c.Do("GET", r.Prefix+key))
@@ -25,10 +25,6 @@ func (r *Redis) Get(key string) (res []byte, err error) {
 		err = NotFound
 	}
 	return
-}
-
-func (r *Redis) GetUpstream(key string) ([]byte, error) {
-	return r.Get(key)
 }
 
 func (r *Redis) Set(key string, value []byte, ttl time.Duration) error {

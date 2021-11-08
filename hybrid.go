@@ -19,9 +19,9 @@ func NewHybrid(redis *redis.Pool, cache Cache) *Hybrid {
 	}
 }
 
-func (c *Hybrid) get(key string, upstreamOnly bool) (value []byte, err error) {
+func (c *Hybrid) Get(key string, upstreamOnly bool) (value []byte, err error) {
 	if !upstreamOnly {
-		if val, err_ := c.Cache.Get(key); err_ == nil {
+		if val, err_ := c.Cache.Get(key, false); err_ == nil {
 			value = val
 			return
 		}
@@ -54,14 +54,6 @@ func (c *Hybrid) get(key string, upstreamOnly bool) (value []byte, err error) {
 		}
 	}
 	return
-}
-
-func (c *Hybrid) Get(key string) (value []byte, err error) {
-	return c.get(key, false)
-}
-
-func (c *Hybrid) GetUpstream(key string) ([]byte, error) {
-	return c.get(key, true)
 }
 
 func (c *Hybrid) Set(key string, value []byte, ttl time.Duration) error {
