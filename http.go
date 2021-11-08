@@ -44,7 +44,7 @@ func (h *HTTP) Handler(next http.Handler) http.Handler {
 			res = ww.Result()
 			p = newPayload(ww.Body.Bytes()).WithHeader(res.Header, res.StatusCode)
 			if !h.isHandleResponse(res) {
-				p.Discard()
+				err = NoCache
 			}
 			return
 		}, h.Timeout, h.FreshFor, h.TTL); err != nil || p == nil {

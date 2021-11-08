@@ -12,7 +12,8 @@ type Cache interface {
 	Set(key string, value []byte, ttl time.Duration) error
 }
 
-var NotFound = errors.New("cache: not found")
+var NotFound = errors.New("not found")
+var NoCache = errors.New("no cache")
 
 func do(
 	ctx context.Context,
@@ -35,11 +36,16 @@ func do(
 					}
 				}()
 				defer cancel()
-				if v, err := fn(ctx); err == nil {
-					if v != nil && v.IsValid() {
-						v.FreshFor(freshFor)
-						_ = set(c, key, v, ttl)
-					}
+				v, err := fn(ctx)
+				if err != nil {
+					return
+				}
+				if err == NoCache {
+					err = nil
+				}
+				if v != nil && v.IsValid() {
+					v.FreshFor(freshFor)
+					_ = set(c, key, v, ttl)
 				}
 			}()
 		}
@@ -50,6 +56,9 @@ func do(
 	}
 	defer cancel()
 	if p, err = fn(ctx); err != nil {
+		if err == NoCache {
+			err = nil
+		}
 		return
 	}
 	if p != nil && p.IsValid() {

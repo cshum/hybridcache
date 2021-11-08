@@ -8,13 +8,12 @@ import (
 const v = 1
 
 type payload struct {
-	_msgpack    struct{} `msgpack:",omitempty"`
-	BestBefore  time.Time
-	Value       []byte
-	Header      http.Header
-	StatusCode  int
-	V           int
-	isDiscarded bool
+	_msgpack   struct{} `msgpack:",omitempty"`
+	BestBefore time.Time
+	Value      []byte
+	Header     http.Header
+	StatusCode int
+	V          int
 }
 
 func newPayload(value []byte) *payload {
@@ -35,15 +34,10 @@ func (p *payload) FreshFor(freshFor time.Duration) *payload {
 	return p
 }
 
-func (p *payload) Discard() *payload {
-	p.isDiscarded = true
-	return p
-}
-
 func (p payload) NeedRefresh() bool {
 	return time.Now().After(p.BestBefore)
 }
 
 func (p payload) IsValid() bool {
-	return p.V == v && !p.isDiscarded
+	return p.V == v
 }
