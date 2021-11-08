@@ -8,7 +8,8 @@ import (
 )
 
 type Cache interface {
-	Get(key string, upstreamOnly bool) ([]byte, error)
+	Get(key string) ([]byte, error)
+	GetUpstream(key string) ([]byte, error)
 	Set(key string, value []byte, ttl time.Duration) error
 }
 
@@ -95,10 +96,16 @@ func set(c Cache, key string, p *payload, ttl time.Duration) error {
 	return c.Set(key, b, ttl)
 }
 
-func get(c Cache, key string, upstreamOnly bool) (p *payload, err error) {
+func get(c Cache, key string, upstream bool) (p *payload, err error) {
 	var val []byte
-	if val, err = c.Get(key, upstreamOnly); err != nil {
-		return
+	if upstream {
+		if val, err = c.GetUpstream(key); err != nil {
+			return
+		}
+	} else {
+		if val, err = c.Get(key); err != nil {
+			return
+		}
 	}
 	p = &payload{}
 	if err = msgpack.Unmarshal(val, p); err != nil {

@@ -26,11 +26,15 @@ func NewMemory(maxItems, maxSize int64, maxTTL time.Duration) *Memory {
 	}
 }
 
-func (c *Memory) Get(key string, _ bool) ([]byte, error) {
+func (c *Memory) Get(key string) ([]byte, error) {
 	if res, ok := c.Cache.Get(key); ok {
 		return res.([]byte), nil
 	}
 	return nil, NotFound
+}
+
+func (c *Memory) GetUpstream(key string) ([]byte, error) {
+	return c.Get(key)
 }
 
 func (c *Memory) Set(key string, value []byte, ttl time.Duration) error {
