@@ -2,7 +2,7 @@ package cache
 
 import (
 	"context"
-	"encoding/json"
+	"github.com/vmihailenco/msgpack/v5"
 	"time"
 )
 
@@ -54,7 +54,7 @@ func (f Func) Do(
 				return
 			}
 		} else {
-			if b, err = json.Marshal(v); err != nil {
+			if b, err = msgpack.Marshal(v); err != nil {
 				return
 			}
 		}
@@ -66,7 +66,7 @@ func (f Func) Do(
 	if f.Unmarshal != nil {
 		return f.Unmarshal(p.Value, v)
 	} else {
-		return json.Unmarshal(p.Value, v)
+		return msgpack.Unmarshal(p.Value, v)
 	}
 }
 
@@ -75,8 +75,5 @@ func NewFunc(c Cache, freshFor, ttl time.Duration) *Func {
 		Cache:    c,
 		FreshFor: freshFor,
 		TTL:      ttl,
-
-		Marshal:   json.Marshal,
-		Unmarshal: json.Unmarshal,
 	}
 }
