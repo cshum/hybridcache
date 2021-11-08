@@ -8,37 +8,43 @@ import (
 )
 
 func TestFunc(t *testing.T) {
-	c := NewMemory(10, int64(10<<20), -1)
-	ctx := context.Background()
-	if val, err := NewFunc(c, time.Millisecond, time.Minute).Do(ctx, "a", func(_ context.Context) ([]byte, error) {
-		return []byte("b"), nil
-	}); err != nil || string(val) != "b" {
-		t.Error(string(val), err)
+	var (
+		err error
+		c   = NewMemory(10, int64(10<<20), -1)
+		fn1 = NewFunc(c, time.Millisecond, time.Minute)
+		fn2 = NewFunc(c, time.Millisecond*10, time.Minute)
+		ctx = context.Background()
+	)
+	var val string
+	if err = fn1.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
+		return "b", nil
+	}, &val); err != nil || val != "b" {
+		t.Error(val, err)
 	}
 	time.Sleep(time.Millisecond * 2)
-	if val, err := NewFunc(c, time.Millisecond, time.Minute).Do(ctx, "a", func(_ context.Context) ([]byte, error) {
+	if err = fn1.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
 		return nil, errors.New("should absorb error")
-	}); err != nil || string(val) != "b" {
-		t.Error(string(val), err)
+	}, &val); err != nil || val != "b" {
+		t.Error(val, err)
 	}
 	time.Sleep(time.Millisecond * 2)
-	if val, err := NewFunc(c, time.Millisecond, time.Minute).Do(ctx, "a", func(_ context.Context) ([]byte, error) {
-		return []byte("c"), nil
-	}); err != nil || string(val) != "b" {
-		t.Error(string(val), err)
+	if err = fn1.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
+		return "c", nil
+	}, &val); err != nil || val != "b" {
+		t.Error(val, err)
 	}
 	time.Sleep(time.Millisecond * 2)
-	if val, err := NewFunc(c, time.Millisecond*10, time.Minute).Do(ctx, "a", func(_ context.Context) ([]byte, error) {
-		return []byte("d"), nil
-	}); err != nil || string(val) != "c" {
-		t.Error(string(val), err)
+	if err = fn2.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
+		return "d", nil
+	}, &val); err != nil || val != "c" {
+		t.Error(val, err)
 	}
 	time.Sleep(time.Millisecond * 2)
 	for i := 0; i < 3; i++ {
-		if val, err := NewFunc(c, time.Millisecond, time.Minute).Do(ctx, "a", func(_ context.Context) ([]byte, error) {
-			return []byte("e"), nil
-		}); err != nil || string(val) != "d" {
-			t.Error(string(val), err)
+		if err = fn1.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
+			return "e", nil
+		}, &val); err != nil || val != "d" {
+			t.Error(val, err)
 		}
 		time.Sleep(time.Millisecond)
 	}
