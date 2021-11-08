@@ -16,7 +16,7 @@ type Func struct {
 	Unmarshal func([]byte, interface{}) error
 }
 
-func (f Func) do(
+func (f Func) DoBytes(
 	ctx context.Context, key string,
 	fn func(context.Context) ([]byte, error),
 ) (value []byte, err error) {
@@ -61,7 +61,7 @@ func (f Func) Do(
 	v interface{},
 ) (err error) {
 	var b []byte
-	if b, err = f.do(ctx, key, func(ctx context.Context) (val []byte, err error) {
+	if b, err = f.DoBytes(ctx, key, func(ctx context.Context) (val []byte, err error) {
 		var v interface{}
 		if v, err = fn(ctx); err != nil {
 			return
