@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"github.com/vmihailenco/msgpack/v5"
 	"net/http"
 	"time"
 )
@@ -17,11 +16,10 @@ type payload struct {
 	V          int
 }
 
-func newPayload(value []byte, freshFor time.Duration) *payload {
+func newPayload(value []byte) *payload {
 	return &payload{
-		Value:      value,
-		BestBefore: time.Now().Add(freshFor),
-		V:          v,
+		Value: value,
+		V:     v,
 	}
 }
 
@@ -31,35 +29,15 @@ func (p *payload) WithHeader(header http.Header, status int) *payload {
 	return p
 }
 
+func (p *payload) FreshFor(freshFor time.Duration) *payload {
+	p.BestBefore = time.Now().Add(freshFor)
+	return p
+}
+
 func (p payload) NeedRefresh() bool {
 	return time.Now().After(p.BestBefore)
 }
 
 func (p payload) IsValid() bool {
 	return p.V == v
-}
-
-func setPayload(c Cache, key string, p *payload, ttl time.Duration) error {
-	b, err := msgpack.Marshal(p)
-	if err != nil {
-		return err
-	}
-	return c.Set(key, b, ttl)
-}
-
-func getPayload(c Cache, key string) (p *payload, err error) {
-	val, err := c.Get(key)
-	if err != nil {
-		return
-	}
-	p = &payload{}
-	if err = msgpack.Unmarshal(val, p); err != nil {
-		return
-	}
-	if !p.IsValid() {
-		err = NotFound
-		p = nil
-		return
-	}
-	return
 }

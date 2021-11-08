@@ -33,7 +33,7 @@ func (h *HTTP) Handler(next http.Handler) http.Handler {
 		if h.GetKey != nil {
 			key = h.GetKey(r)
 		}
-		if v, err := getPayload(h.Cache, key); err == nil {
+		if v, err := get(h.Cache, key); err == nil {
 			overrideHeader(w.Header(), v.Header)
 			w.WriteHeader(v.StatusCode)
 			_, _ = w.Write(v.Value)
@@ -56,7 +56,7 @@ func (h *HTTP) Handler(next http.Handler) http.Handler {
 					if !h.isHandleResponse(res) {
 						return
 					}
-					_ = setPayload(h.Cache, key, newPayload(ww.Body.Bytes(), h.FreshFor).
+					_ = set(h.Cache, key, newPayload(ww.Body.Bytes()).FreshFor(h.FreshFor).
 						WithHeader(res.Header, res.StatusCode), h.TTL)
 				}()
 			}
@@ -78,8 +78,8 @@ func (h *HTTP) Handler(next http.Handler) http.Handler {
 			return
 		}
 		go func() {
-			_ = setPayload(
-				h.Cache, key, newPayload(val, h.FreshFor).
+			_ = set(
+				h.Cache, key, newPayload(val).FreshFor(h.FreshFor).
 					WithHeader(res.Header, res.StatusCode), h.TTL)
 		}()
 	})

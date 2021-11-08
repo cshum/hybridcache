@@ -20,38 +20,18 @@ func (f Func) DoBytes(
 	ctx context.Context, key string,
 	fn func(context.Context) ([]byte, error),
 ) (value []byte, err error) {
-	var cancel = func() {}
-	if v, err_ := getPayload(f.Cache, key); err_ == nil {
-		value = v.Value
-		if v.NeedRefresh() {
-			ctx = DetachContext(ctx)
-			if f.Timeout > 0 {
-				ctx, cancel = context.WithTimeout(ctx, f.Timeout)
-			}
-			go func() {
-				defer func() {
-					if err := recover(); err != nil {
-						// todo log panic
-					}
-				}()
-				defer cancel()
-				if val, err := fn(ctx); err == nil {
-					_ = setPayload(f.Cache, key, newPayload(val, f.FreshFor), f.TTL)
-				}
-			}()
+	var p *payload
+	if p, err = do(ctx, f.Cache, key, func(ctx context.Context) (p *payload, err error) {
+		var b []byte
+		if b, err = fn(ctx); err != nil {
+			return
 		}
+		p = newPayload(b)
+		return
+	}, f.Timeout, f.FreshFor, f.TTL); err != nil {
 		return
 	}
-	if f.Timeout > 0 {
-		ctx, cancel = context.WithTimeout(ctx, f.Timeout)
-	}
-	defer cancel()
-	if value, err = fn(ctx); err != nil {
-		return
-	}
-	go func() {
-		_ = setPayload(f.Cache, key, newPayload(value, f.FreshFor), f.TTL)
-	}()
+	value = p.Value
 	return
 }
 
@@ -60,24 +40,33 @@ func (f Func) Do(
 	fn func(context.Context) (interface{}, error),
 	v interface{},
 ) (err error) {
-	var b []byte
-	if b, err = f.DoBytes(ctx, key, func(ctx context.Context) (val []byte, err error) {
-		var v interface{}
+	var p *payload
+	if p, err = do(ctx, f.Cache, key, func(ctx context.Context) (p *payload, err error) {
+		var (
+			v interface{}
+			b []byte
+		)
 		if v, err = fn(ctx); err != nil {
 			return
 		}
 		if f.Marshal != nil {
-			return f.Marshal(v)
+			if b, err = f.Marshal(v); err != nil {
+				return
+			}
 		} else {
-			return json.Marshal(v)
+			if b, err = json.Marshal(v); err != nil {
+				return
+			}
 		}
-	}); err != nil {
+		p = newPayload(b)
+		return
+	}, f.Timeout, f.FreshFor, f.TTL); err != nil {
 		return
 	}
 	if f.Unmarshal != nil {
-		return f.Unmarshal(b, v)
+		return f.Unmarshal(p.Value, v)
 	} else {
-		return json.Unmarshal(b, v)
+		return json.Unmarshal(p.Value, v)
 	}
 }
 
