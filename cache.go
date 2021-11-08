@@ -36,8 +36,10 @@ func do(
 				}()
 				defer cancel()
 				if v, err := fn(ctx); err == nil {
-					v.FreshFor(freshFor)
-					_ = set(c, key, v, ttl)
+					if v != nil && v.IsValid() {
+						v.FreshFor(freshFor)
+						_ = set(c, key, v, ttl)
+					}
 				}
 			}()
 		}
@@ -50,10 +52,12 @@ func do(
 	if p, err = fn(ctx); err != nil {
 		return
 	}
-	p.FreshFor(freshFor)
-	go func() {
-		_ = set(c, key, p, ttl)
-	}()
+	if p != nil && p.IsValid() {
+		p.FreshFor(freshFor)
+		go func() {
+			_ = set(c, key, p, ttl)
+		}()
+	}
 	return
 }
 
