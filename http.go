@@ -14,25 +14,25 @@ type HTTP struct {
 	FreshFor time.Duration
 	TTL      time.Duration
 
-	GetKey          func(*http.Request) string
-	IsHandleRequest func(*http.Request) bool
-	IsNoCache       func(*http.Response) bool
+	RequestKey     func(*http.Request) string
+	AcceptRequest  func(*http.Request) bool
+	AcceptResponse func(*http.Response) bool
 }
 
 func (h *HTTP) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
-			key = r.RequestURI
+			key = r.URL.String()
 			ctx = r.Context()
 			p   *payload
 			err error
 		)
-		if h.IsHandleRequest != nil && !h.IsHandleRequest(r) {
+		if h.AcceptRequest != nil && !h.AcceptRequest(r) {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if h.GetKey != nil {
-			key = h.GetKey(r)
+		if h.RequestKey != nil {
+			key = h.RequestKey(r)
 		}
 		if p, err = do(ctx, h.Cache, key, func(ctx context.Context) (p *payload, err error) {
 			var (
@@ -45,7 +45,7 @@ func (h *HTTP) Handler(next http.Handler) http.Handler {
 			p = newPayload(ww.Body.Bytes())
 			p.Header = res.Header
 			p.StatusCode = res.StatusCode
-			if h.IsNoCache != nil && h.IsNoCache(res) {
+			if h.AcceptResponse != nil && h.AcceptResponse(res) {
 				err = NoCache
 			}
 			return
@@ -70,10 +70,10 @@ func NewHTTP(c Cache, freshFor, ttl time.Duration) *HTTP {
 		Cache:    c,
 		FreshFor: freshFor,
 		TTL:      ttl,
-		IsHandleRequest: func(r *http.Request) bool {
+		AcceptRequest: func(r *http.Request) bool {
 			return r.Method == http.MethodGet
 		},
-		IsNoCache: func(res *http.Response) bool {
+		AcceptResponse: func(res *http.Response) bool {
 			return res.StatusCode >= 400
 		},
 	}
