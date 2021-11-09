@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"golang.org/x/sync/errgroup"
 	"testing"
 	"time"
 )
@@ -144,5 +145,60 @@ func TestFuncDo(t *testing.T) {
 		return "c2", NoCache
 	}, &val); err != nil || val != "c2" {
 		t.Error(val, err, "NoCache handling")
+	}
+}
+
+func TestFunc_Do_Concurrent(t *testing.T) {
+	var (
+		c1         = NewMemory(10, int64(10<<20), -1)
+		fn1        = NewFunc(c1, time.Second, time.Minute)
+		c2         = NewMemory(10, int64(10<<20), -1)
+		fn2        = NewFunc(c2, time.Second, time.Minute)
+		ctx        = context.Background()
+		n          = 100
+		called1    = make(chan int, n)
+		responded1 = make(chan int, n)
+		called2    = make(chan int, n)
+		responded2 = make(chan int, n)
+	)
+	g, gctx := errgroup.WithContext(ctx)
+	for i := 0; i < n; i++ {
+		g.Go(func() error {
+			var val string
+			if err := fn1.Do(gctx, "a", func(_ context.Context) (interface{}, error) {
+				time.Sleep(time.Millisecond)
+				called1 <- 1
+				return "foo", nil
+			}, &val); err != nil || val != "foo" {
+				t.Error(val, err, "wrong value")
+				return nil
+			}
+			responded1 <- 1
+			return nil
+		})
+	}
+	for j := 0; j < n; j++ {
+		g.Go(func() error {
+			var val string
+			if err := fn2.Do(gctx, "a", func(_ context.Context) (interface{}, error) {
+				time.Sleep(time.Millisecond)
+				called2 <- 1
+				return "bar", nil
+			}, &val); err != nil || val != "bar" {
+				t.Error(val, err, "wrong value")
+				return nil
+			}
+			responded2 <- 1
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		t.Error(err)
+	}
+	if len(called1) != 1 || len(called2) != 1 {
+		t.Error(len(called1), len(called2), "should not duplicate concurrent calls")
+	}
+	if len(responded1) != 100 || len(responded2) != 100 {
+		t.Error(len(responded1), len(responded2), "should complete response")
 	}
 }
