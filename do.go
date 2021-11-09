@@ -69,9 +69,7 @@ func doMiss(
 		return
 	}
 	p.FreshFor(freshFor)
-	go func() {
-		_ = set(c, key, p, ttl)
-	}()
+	_ = set(c, key, p, ttl)
 	return
 }
 
