@@ -70,14 +70,11 @@ func NewHTTP(c Cache, freshFor, ttl time.Duration) *HTTP {
 		Cache:    c,
 		FreshFor: freshFor,
 		TTL:      ttl,
-		GetKey: func(r *http.Request) string {
-			return r.RequestURI
-		},
 		IsHandleRequest: func(r *http.Request) bool {
 			return r.Method == http.MethodGet
 		},
 		IsNoCache: func(res *http.Response) bool {
-			return res.StatusCode < 400
+			return res.StatusCode >= 400
 		},
 	}
 }
