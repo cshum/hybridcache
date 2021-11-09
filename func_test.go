@@ -166,7 +166,7 @@ func TestFunc_Do_Concurrent(t *testing.T) {
 		g.Go(func() error {
 			var val string
 			if err := fn1.Do(gctx, "a", func(_ context.Context) (interface{}, error) {
-				time.Sleep(time.Millisecond)
+				time.Sleep(time.Millisecond * 10)
 				called1 <- 1
 				return "foo", nil
 			}, &val); err != nil || val != "foo" {
@@ -181,7 +181,7 @@ func TestFunc_Do_Concurrent(t *testing.T) {
 		g.Go(func() error {
 			var val string
 			if err := fn2.Do(gctx, "a", func(_ context.Context) (interface{}, error) {
-				time.Sleep(time.Millisecond)
+				time.Sleep(time.Millisecond * 10)
 				called2 <- 1
 				return "bar", nil
 			}, &val); err != nil || val != "bar" {
