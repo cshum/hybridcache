@@ -15,7 +15,7 @@ func TestDetachContext(t *testing.T) {
 	time.Sleep(time.Millisecond)
 	ctx = DetachContext(ctx)
 	if err := ctx.Err(); err != nil {
-		t.Error(err)
+		t.Error(err, "should not inherit timeout")
 	}
 	if !IsDetached(ctx) {
 		t.Error("detached ctx")
