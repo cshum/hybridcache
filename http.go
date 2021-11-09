@@ -10,7 +10,6 @@ import (
 
 type HTTP struct {
 	Cache    Cache
-	Timeout  time.Duration
 	FreshFor time.Duration
 	TTL      time.Duration
 
@@ -49,7 +48,7 @@ func (h *HTTP) Handler(next http.Handler) http.Handler {
 				err = NoCache
 			}
 			return
-		}, h.Timeout, h.FreshFor, h.TTL); err != nil || p == nil {
+		}, h.FreshFor, h.TTL); err != nil || p == nil {
 			next.ServeHTTP(w, r)
 			return
 		}

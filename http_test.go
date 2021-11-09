@@ -109,7 +109,7 @@ func TestHTTP_Handler(t *testing.T) {
 			200,
 		},
 		{
-			"new response based on NoCache",
+			"new response based on previous no cache",
 			"http://foo.bar/test-3",
 			"GET",
 			"value 9",

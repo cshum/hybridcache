@@ -8,7 +8,6 @@ import (
 
 type Func struct {
 	Cache    Cache
-	Timeout  time.Duration
 	FreshFor time.Duration
 	TTL      time.Duration
 
@@ -28,7 +27,7 @@ func (f Func) DoBytes(
 		}
 		p = newPayload(b)
 		return
-	}, f.Timeout, f.FreshFor, f.TTL); err != nil {
+	}, f.FreshFor, f.TTL); err != nil {
 		return
 	}
 	value = p.Value
@@ -55,12 +54,12 @@ func (f Func) Do(
 		p = newPayload(b)
 		return
 	}
-	if p, err = do(ctx, f.Cache, key, pfn, f.Timeout, f.FreshFor, f.TTL); err != nil {
+	if p, err = do(ctx, f.Cache, key, pfn, f.FreshFor, f.TTL); err != nil {
 		return
 	}
 	if err = f.unmarshal(p.Value, v); err != nil {
 		// cache payload valid but value corrupted, get live and try once more
-		if p, err = doMiss(ctx, f.Cache, key, pfn, f.Timeout, f.FreshFor, f.TTL); err != nil {
+		if p, err = doMiss(ctx, f.Cache, key, pfn, f.FreshFor, f.TTL); err != nil {
 			return
 		}
 		if err = f.unmarshal(p.Value, v); err != nil {

@@ -6,29 +6,22 @@ import (
 	"time"
 )
 
-func noop() {}
-
 func do(
 	ctx context.Context,
 	c Cache, key string,
 	fn func(context.Context) (*payload, error),
-	timeout, freshFor, ttl time.Duration,
+	freshFor, ttl time.Duration,
 ) (p *payload, err error) {
-	var cancel = noop
 	if v, err_ := get(c, key); err_ == nil {
 		p = v
 		if v.NeedRefresh() {
 			ctx = DetachContext(ctx)
-			if timeout > 0 {
-				ctx, cancel = context.WithTimeout(ctx, timeout)
-			}
 			go func() {
 				defer func() {
 					if r := recover(); r != nil {
 						// todo log panic
 					}
 				}()
-				defer cancel()
 				var (
 					v   *payload
 					err error
@@ -56,20 +49,15 @@ func do(
 		}
 		return
 	}
-	return doMiss(ctx, c, key, fn, timeout, freshFor, ttl)
+	return doMiss(ctx, c, key, fn, freshFor, ttl)
 }
 
 func doMiss(
 	ctx context.Context,
 	c Cache, key string,
 	fn func(context.Context) (*payload, error),
-	timeout, freshFor, ttl time.Duration,
+	freshFor, ttl time.Duration,
 ) (p *payload, err error) {
-	var cancel = noop
-	if timeout > 0 {
-		ctx, cancel = context.WithTimeout(ctx, timeout)
-	}
-	defer cancel()
 	if p, err = fn(ctx); err != nil {
 		if p != nil && err == NoCache {
 			err = nil
