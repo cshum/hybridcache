@@ -29,7 +29,7 @@ func DoTestCache(t *testing.T, c Cache) {
 	if v, err := c.Get("a"); string(v) != "b" || err != nil {
 		t.Error(err, "should value and no error")
 	}
-	time.Sleep(time.Second * 1)
+	time.Sleep(time.Millisecond * 100)
 	if v, err := c.Get("a"); v != nil || err != NotFound {
 		t.Error(v, err, "should value nil and err not found")
 	}

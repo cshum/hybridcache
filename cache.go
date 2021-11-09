@@ -16,13 +16,15 @@ type Cache interface {
 var NotFound = errors.New("not found")
 var NoCache = errors.New("no cache")
 
+func noop() {}
+
 func do(
 	ctx context.Context,
 	c Cache, key string,
 	fn func(context.Context) (*payload, error),
 	timeout, freshFor, ttl time.Duration,
 ) (p *payload, err error) {
-	var cancel = func() {}
+	var cancel = noop
 	if v, err_ := get(c, key); err_ == nil {
 		p = v
 		if v.NeedRefresh() {
@@ -73,7 +75,7 @@ func doMiss(
 	fn func(context.Context) (*payload, error),
 	timeout, freshFor, ttl time.Duration,
 ) (p *payload, err error) {
-	var cancel = func() {}
+	var cancel = noop
 	if timeout > 0 {
 		ctx, cancel = context.WithTimeout(ctx, timeout)
 	}
@@ -107,14 +109,14 @@ func set(c Cache, key string, p *payload, ttl time.Duration) error {
 }
 
 func get(c Cache, key string) (p *payload, err error) {
-	return unmarshal(c.Get(key))
+	return parse(c.Get(key))
 }
 
 func fetch(c Cache, key string) (p *payload, err error) {
-	return unmarshal(c.Fetch(key))
+	return parse(c.Fetch(key))
 }
 
-func unmarshal(val []byte, e error) (p *payload, err error) {
+func parse(val []byte, e error) (p *payload, err error) {
 	if e != nil {
 		err = e
 		return

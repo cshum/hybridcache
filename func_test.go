@@ -49,7 +49,7 @@ func TestFunc(t *testing.T) {
 		}
 		time.Sleep(time.Millisecond)
 	}
-	// cached value corrupted
+	// cached value corrupted should be treated as cache miss
 	fn1.Marshal = json.Marshal
 	fn1.Unmarshal = json.Unmarshal
 	if err = fn1.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
