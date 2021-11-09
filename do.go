@@ -22,42 +22,27 @@ func do(
 						// todo log panic
 					}
 				}()
-				var (
-					v   *payload
-					err error
-				)
-				// todo stampede handling
 				if v, err_ := fetch(c, key); err_ == nil {
 					if !v.NeedRefresh() {
 						return
 					}
 				}
-				v, err = fn(ctx)
-				if err != nil {
-					if v != nil && err == NoCache {
-						err = nil
-					}
-					return
-				}
-				if v == nil {
-					err = NotFound
-					return
-				}
-				v.FreshFor(freshFor)
-				_ = set(c, key, v, ttl)
+				_, _ = doCall(ctx, c, key, fn, freshFor, ttl)
 			}()
 		}
 		return
+	} else {
+		return doCall(ctx, c, key, fn, freshFor, ttl)
 	}
-	return doMiss(ctx, c, key, fn, freshFor, ttl)
 }
 
-func doMiss(
+func doCall(
 	ctx context.Context,
 	c Cache, key string,
 	fn func(context.Context) (*payload, error),
 	freshFor, ttl time.Duration,
 ) (p *payload, err error) {
+	// todo singleflight handling
 	if p, err = fn(ctx); err != nil {
 		if p != nil && err == NoCache {
 			err = nil

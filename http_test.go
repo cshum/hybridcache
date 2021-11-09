@@ -131,7 +131,6 @@ func TestHTTP_Handler(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			handler.ServeHTTP(w, r)
-			time.Sleep(time.Millisecond)
 
 			if !reflect.DeepEqual(w.Code, tt.wantCode) {
 				t.Errorf(" = %v, want %v", w.Code, tt.wantCode)

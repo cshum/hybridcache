@@ -59,7 +59,7 @@ func (f Func) Do(
 	}
 	if err = f.unmarshal(p.Value, v); err != nil {
 		// cache payload valid but value corrupted, get live and try once more
-		if p, err = doMiss(ctx, f.Cache, key, pfn, f.FreshFor, f.TTL); err != nil {
+		if p, err = doCall(ctx, f.Cache, key, pfn, f.FreshFor, f.TTL); err != nil {
 			return
 		}
 		if err = f.unmarshal(p.Value, v); err != nil {
