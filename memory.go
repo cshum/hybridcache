@@ -7,6 +7,7 @@ import (
 )
 
 type Memory struct {
+	Group
 	Cache  *ristretto.Cache
 	MaxTTL time.Duration
 }

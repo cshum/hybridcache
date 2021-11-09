@@ -41,21 +41,26 @@ func doCall(
 	c Cache, key string,
 	fn func(context.Context) (*payload, error),
 	freshFor, ttl time.Duration,
-) (p *payload, err error) {
-	// todo singleflight handling
-	if p, err = fn(ctx); err != nil {
-		if p != nil && err == NoCache {
-			err = nil
+) (*payload, error) {
+	v, err := c.Race(key, func() (interface{}, error) {
+		p, err := fn(ctx)
+		if err != nil {
+			if p != nil && err == NoCache {
+				return p, nil
+			}
+			return nil, err
 		}
-		return
+		if p == nil {
+			return nil, NotFound
+		}
+		p.FreshFor(freshFor)
+		_ = set(c, key, p, ttl)
+		return p, nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	if p == nil {
-		err = NotFound
-		return
-	}
-	p.FreshFor(freshFor)
-	_ = set(c, key, p, ttl)
-	return
+	return v.(*payload), nil
 }
 
 func set(c Cache, key string, p *payload, ttl time.Duration) error {

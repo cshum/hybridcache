@@ -7,6 +7,7 @@ import (
 )
 
 type Hybrid struct {
+	Group
 	Pool   *redis.Pool
 	Prefix string
 	Cache  Cache

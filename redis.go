@@ -7,6 +7,7 @@ import (
 )
 
 type Redis struct {
+	Group
 	Pool   *redis.Pool
 	Prefix string
 }
