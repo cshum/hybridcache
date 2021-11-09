@@ -13,9 +13,9 @@ type Cache interface {
 	Set(key string, value []byte, ttl time.Duration) error
 }
 
-var NotFound = errors.New("not found")
+var NotFound = errors.New("hybridcache: not found")
 
-var NoCache = errors.New("no cache")
+var NoCache = errors.New("hybridcache: no cache")
 
 func noop() {}
 
@@ -52,7 +52,7 @@ func do(
 				}
 				v, err = fn(ctx)
 				if err != nil {
-					if err == NoCache {
+					if v != nil && err == NoCache {
 						err = nil
 					}
 					return
@@ -82,7 +82,7 @@ func doMiss(
 	}
 	defer cancel()
 	if p, err = fn(ctx); err != nil {
-		if err == NoCache {
+		if p != nil && err == NoCache {
 			err = nil
 		}
 		return

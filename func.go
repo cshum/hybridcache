@@ -23,7 +23,7 @@ func (f Func) DoBytes(
 	var p *payload
 	if p, err = do(ctx, f.Cache, key, func(ctx context.Context) (p *payload, err error) {
 		var b []byte
-		if b, err = fn(ctx); err != nil {
+		if b, err = fn(ctx); err != nil && err != NoCache {
 			return
 		}
 		p = newPayload(b)
@@ -46,7 +46,7 @@ func (f Func) Do(
 			v interface{}
 			b []byte
 		)
-		if v, err = fn(ctx); err != nil {
+		if v, err = fn(ctx); err != nil && err != NoCache {
 			return
 		}
 		if b, err = f.marshal(v); err != nil {
