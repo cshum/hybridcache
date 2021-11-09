@@ -23,12 +23,6 @@ func newPayload(value []byte) *payload {
 	}
 }
 
-func (p *payload) WithHeader(header http.Header, status int) *payload {
-	p.Header = header
-	p.StatusCode = status
-	return p
-}
-
 func (p *payload) FreshFor(freshFor time.Duration) *payload {
 	p.BestBefore = time.Now().Add(freshFor)
 	return p

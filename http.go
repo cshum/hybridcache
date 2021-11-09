@@ -42,7 +42,9 @@ func (h *HTTP) Handler(next http.Handler) http.Handler {
 			)
 			next.ServeHTTP(ww, rr)
 			res = ww.Result()
-			p = newPayload(ww.Body.Bytes()).WithHeader(res.Header, res.StatusCode)
+			p = newPayload(ww.Body.Bytes())
+			p.Header = res.Header
+			p.StatusCode = res.StatusCode
 			if h.IsNoCache != nil && h.IsNoCache(res) {
 				err = NoCache
 			}

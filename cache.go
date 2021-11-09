@@ -14,6 +14,7 @@ type Cache interface {
 }
 
 var NotFound = errors.New("not found")
+
 var NoCache = errors.New("no cache")
 
 func noop() {}
@@ -34,7 +35,7 @@ func do(
 			}
 			go func() {
 				defer func() {
-					if err := recover(); err != nil {
+					if r := recover(); r != nil {
 						// todo log panic
 					}
 				}()

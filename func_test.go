@@ -20,34 +20,34 @@ func TestFunc(t *testing.T) {
 	if err = fn1.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
 		return "b", nil
 	}, &val); err != nil || val != "b" {
-		t.Error(val, err)
+		t.Error(val, err, "should be cache miss")
 	}
 	time.Sleep(time.Millisecond * 2)
 	if err = fn1.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
-		return nil, errors.New("should absorb error")
+		return nil, errors.New("booommmm")
 	}, &val); err != nil || val != "b" {
-		t.Error(val, err)
+		t.Error(val, err, "should absorb error")
 	}
 	time.Sleep(time.Millisecond * 2)
 	if err = fn1.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
 		return "c", nil
 	}, &val); err != nil || val != "b" {
-		t.Error(val, err)
+		t.Error(val, err, "should use cache")
 	}
 	time.Sleep(time.Millisecond * 2)
 	if err = fn2.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
 		return "d", nil
 	}, &val); err != nil || val != "c" {
-		t.Error(val, err)
+		t.Error(val, err, "should need refresh")
 	}
 	time.Sleep(time.Millisecond * 2)
 	for i := 0; i < 3; i++ {
 		if err = fn1.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
 			return "e", nil
 		}, &val); err != nil || val != "d" {
-			t.Error(val, err)
+			t.Error(val, err, "should not need refresh")
 		}
-		time.Sleep(time.Millisecond)
+		time.Sleep(time.Millisecond * 2)
 	}
 	// cached value corrupted should be treated as cache miss
 	fn1.Marshal = json.Marshal
