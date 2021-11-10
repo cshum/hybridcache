@@ -147,11 +147,17 @@ func TestFuncDo(t *testing.T) {
 	}, &val); err != nil || val != "c2" {
 		t.Error(val, err, "NoCache handling")
 	}
-	if err = fn1.Do(ctx, "loooong", func(ctx context.Context) (interface{}, error) {
-		time.Sleep(time.Second)
+	if err = fn2.Do(ctx, "loooong", func(ctx context.Context) (interface{}, error) {
+		time.Sleep(time.Millisecond * 10)
 		return "dead", nil
-	}, &val); err == nil || val == "dead" {
+	}, &val); err != context.DeadlineExceeded || val == "dead" {
 		t.Error(val, err, "should timeout")
+	}
+	time.Sleep(time.Millisecond * 10)
+	if err = fn2.Do(ctx, "loooong", func(ctx context.Context) (interface{}, error) {
+		return "ok", nil
+	}, &val); err != nil || val != "ok" {
+		t.Error(val, err, "last timeout should not set")
 	}
 }
 

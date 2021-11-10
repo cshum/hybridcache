@@ -61,6 +61,9 @@ func doCall(
 			if err != nil {
 				return nil, err
 			}
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
 			_ = c.Set(key, b, ttl)
 			return b, nil
 		}, waitFor)
