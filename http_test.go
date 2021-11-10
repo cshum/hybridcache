@@ -40,7 +40,10 @@ func TestHTTP_Handler(t *testing.T) {
 		defer res.Body.Close()
 		reader := ioutil.NopCloser(bytes.NewBuffer(body))
 		res.Body = reader
-		return strings.Contains(string(body), "value 8")
+		if strings.Contains(string(body), "value 8") {
+			return false
+		}
+		return true
 	}
 
 	handler := c.Handler(httpTestHandler)
