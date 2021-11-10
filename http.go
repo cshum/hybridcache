@@ -18,7 +18,7 @@ type HTTP struct {
 	AcceptResponse func(*http.Response) bool
 }
 
-func (h *HTTP) Handler(next http.Handler) http.Handler {
+func (h HTTP) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
 			key = r.URL.String()
@@ -52,16 +52,12 @@ func (h *HTTP) Handler(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		overrideHeader(w.Header(), p.Header)
+		for k, v := range p.Header {
+			w.Header().Set(k, strings.Join(v, ","))
+		}
 		w.WriteHeader(p.StatusCode)
 		_, _ = w.Write(p.Value)
 	})
-}
-
-func overrideHeader(dest, source http.Header) {
-	for k, v := range source {
-		dest.Set(k, strings.Join(v, ","))
-	}
 }
 
 func NewHTTP(c Cache, freshFor, ttl time.Duration) *HTTP {

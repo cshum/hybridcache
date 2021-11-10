@@ -28,10 +28,10 @@ func (p *payload) FreshFor(freshFor time.Duration) *payload {
 	return p
 }
 
-func (p payload) NeedRefresh() bool {
+func (p *payload) NeedRefresh() bool {
 	return time.Now().After(p.BestBefore)
 }
 
-func (p payload) IsValid() bool {
+func (p *payload) IsValid() bool {
 	return p.V == v
 }
