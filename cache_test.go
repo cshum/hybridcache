@@ -37,6 +37,7 @@ func DoTestCache(t *testing.T, c Cache) {
 		t.Error(v, err, "should value nil and err not found")
 	}
 	DoTestRace(t, c)
+	DoTestRaceWaitFor(t, c)
 }
 
 func DoTestRace(t *testing.T, c Cache) {
@@ -53,7 +54,7 @@ func DoTestRace(t *testing.T, c Cache) {
 				g.Go(func() error {
 					if b, err := c.Race(j, func() ([]byte, error) {
 						called <- 1
-						time.Sleep(time.Millisecond * 100)
+						time.Sleep(time.Millisecond * 50)
 						return []byte(j), nil
 					}, time.Millisecond*101); err != nil || string(b) != j {
 						t.Error(string(b), err, "value should be "+j)
@@ -73,6 +74,16 @@ func DoTestRace(t *testing.T, c Cache) {
 	}
 	if len(responded) != m*n {
 		t.Error(len(responded), "should complete response")
+	}
+}
+
+func DoTestRaceWaitFor(t *testing.T, c Cache) {
+	b, err := c.Race("looong", func() ([]byte, error) {
+		time.Sleep(time.Second)
+		return []byte("a"), nil
+	}, time.Millisecond)
+	if string(b) == "a" || err == nil {
+		t.Error(string(b), err, "should timeout")
 	}
 }
 
