@@ -28,7 +28,7 @@ func (c *Redis) Get(key string) (res []byte, err error) {
 	return
 }
 
-func (c *Redis) GetWithTTL(key string) (value []byte, ttl time.Duration, err error) {
+func (c *Redis) Fetch(key string) (value []byte, ttl time.Duration, err error) {
 	var conn = c.Pool.Get()
 	defer conn.Close()
 	if err = conn.Send("GET", c.Prefix+key); err != nil {
@@ -52,10 +52,6 @@ func (c *Redis) GetWithTTL(key string) (value []byte, ttl time.Duration, err err
 	}
 	ttl = fromMilliseconds(pTTL)
 	return
-}
-
-func (c *Redis) Fetch(key string) ([]byte, error) {
-	return c.Get(key)
 }
 
 func (c *Redis) Set(key string, value []byte, ttl time.Duration) error {

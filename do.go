@@ -22,9 +22,11 @@ func do(
 						// todo log panic
 					}
 				}()
-				if v, err_ := parse(c.Fetch(key)); err_ == nil {
-					if !v.NeedRefresh() {
-						return
+				if b, _, err_ := c.Fetch(key); err_ == nil {
+					if v, err_ := parse(b, nil); err_ == nil {
+						if !v.NeedRefresh() {
+							return
+						}
 					}
 				}
 				_, _ = doCall(ctx, c, key, fn, freshFor, ttl)

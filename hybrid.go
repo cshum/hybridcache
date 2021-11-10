@@ -21,16 +21,14 @@ func (c *Hybrid) Get(key string) (value []byte, err error) {
 		value = val
 		return
 	}
-	return c.Fetch(key)
+	if value, _, err = c.Fetch(key); err != nil {
+		return
+	}
+	return
 }
 
-func (c *Hybrid) GetWithTTL(key string) (value []byte, ttl time.Duration, err error) {
-	return c.Upstream.GetWithTTL(key)
-}
-
-func (c *Hybrid) Fetch(key string) (value []byte, err error) {
-	var ttl time.Duration
-	if value, ttl, err = c.Upstream.GetWithTTL(key); err != nil {
+func (c *Hybrid) Fetch(key string) (value []byte, ttl time.Duration, err error) {
+	if value, ttl, err = c.Upstream.Fetch(key); err != nil {
 		return
 	}
 	if ttl > 0 {
