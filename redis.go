@@ -7,7 +7,7 @@ import (
 )
 
 type Redis struct {
-	Group  // todo use redis lock for racing mechanisms
+	Group  // todo use redis lock for race mechanism
 	Pool   *redis.Pool
 	Prefix string
 }

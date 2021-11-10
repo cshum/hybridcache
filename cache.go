@@ -7,9 +7,9 @@ import (
 
 type Cache interface {
 	Get(key string) ([]byte, error)
+	GetWithTTL(key string) (value []byte, ttl time.Duration, err error)
 	Fetch(key string) ([]byte, error)
 	Set(key string, value []byte, ttl time.Duration) error
-
 	Race(key string, fn func() ([]byte, error)) ([]byte, error)
 }
 

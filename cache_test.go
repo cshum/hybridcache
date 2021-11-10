@@ -89,17 +89,23 @@ func TestRedis(t *testing.T) {
 }
 
 func TestHybrid(t *testing.T) {
-	DoTestCache(t, NewHybrid(&redis.Pool{
-		Dial: func() (conn redis.Conn, err error) {
-			return redis.Dial("tcp", ":6379")
-		},
-	}, NewMemory(10, int64(10<<20), time.Minute*1)))
+	DoTestCache(t, NewHybrid(
+		NewRedis(&redis.Pool{
+			Dial: func() (conn redis.Conn, err error) {
+				return redis.Dial("tcp", ":6379")
+			},
+		}),
+		NewMemory(10, int64(10<<20), time.Minute*1),
+	))
 }
 
 func TestHybridRedis(t *testing.T) {
-	DoTestCache(t, NewHybrid(&redis.Pool{
-		Dial: func() (conn redis.Conn, err error) {
-			return redis.Dial("tcp", ":6379")
-		},
-	}, NewMemory(10, int64(10<<20), time.Nanosecond)))
+	DoTestCache(t, NewHybrid(
+		NewRedis(&redis.Pool{
+			Dial: func() (conn redis.Conn, err error) {
+				return redis.Dial("tcp", ":6379")
+			},
+		}),
+		NewMemory(10, int64(10<<20), time.Nanosecond)),
+	)
 }

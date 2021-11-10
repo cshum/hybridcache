@@ -34,6 +34,14 @@ func (c *Memory) Get(key string) ([]byte, error) {
 	return nil, NotFound
 }
 
+func (c *Memory) GetWithTTL(key string) (value []byte, ttl time.Duration, err error) {
+	if value, err = c.Get(key); err != nil {
+		return
+	}
+	ttl, _ = c.Cache.GetTTL(key)
+	return
+}
+
 func (c *Memory) Fetch(key string) ([]byte, error) {
 	return c.Get(key)
 }
