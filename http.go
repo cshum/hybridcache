@@ -44,7 +44,7 @@ func (h HTTP) Handler(next http.Handler) http.Handler {
 			p = newPayload(ww.Body.Bytes())
 			p.Header = res.Header
 			p.StatusCode = res.StatusCode
-			if h.AcceptResponse != nil && h.AcceptResponse(res) {
+			if h.AcceptResponse != nil && !h.AcceptResponse(res) {
 				err = NoCache
 			}
 			return
@@ -69,7 +69,7 @@ func NewHTTP(c Cache, freshFor, ttl time.Duration) *HTTP {
 			return r.Method == http.MethodGet
 		},
 		AcceptResponse: func(res *http.Response) bool {
-			return res.StatusCode >= 400
+			return res.StatusCode < 400
 		},
 	}
 }
