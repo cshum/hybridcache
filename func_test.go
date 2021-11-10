@@ -14,9 +14,9 @@ func TestFuncDoBytes(t *testing.T) {
 	var (
 		err  error
 		c    = NewMemory(10, int64(10<<20), -1)
-		fn1  = NewFunc(c, time.Millisecond, time.Minute)
-		fn2  = NewFunc(c, time.Millisecond*10, time.Minute)
-		fn1j = NewFunc(c, time.Millisecond, time.Minute)
+		fn1  = NewFunc(c, time.Millisecond, time.Millisecond, time.Minute)
+		fn2  = NewFunc(c, time.Millisecond, time.Millisecond*10, time.Minute)
+		fn1j = NewFunc(c, time.Millisecond, time.Millisecond, time.Minute)
 		ctx  = context.Background()
 	)
 	fn1j.Marshal = json.Marshal
@@ -81,9 +81,9 @@ func TestFuncDo(t *testing.T) {
 	var (
 		err  error
 		c    = NewMemory(10, int64(10<<20), -1)
-		fn1  = NewFunc(c, time.Millisecond, time.Minute)
-		fn2  = NewFunc(c, time.Millisecond*10, time.Minute)
-		fn1j = NewFunc(c, time.Millisecond, time.Minute)
+		fn1  = NewFunc(c, time.Millisecond, time.Millisecond, time.Minute)
+		fn2  = NewFunc(c, time.Millisecond, time.Millisecond*10, time.Minute)
+		fn1j = NewFunc(c, time.Millisecond, time.Millisecond, time.Minute)
 		ctx  = context.Background()
 	)
 	fn1j.Marshal = json.Marshal
@@ -152,9 +152,9 @@ func TestFuncDo(t *testing.T) {
 func TestFunc_Do_Concurrent(t *testing.T) {
 	var (
 		c1         = NewMemory(10, int64(10<<20), -1)
-		fn1        = NewFunc(c1, time.Second, time.Minute)
+		fn1        = NewFunc(c1, time.Second, time.Second, time.Minute)
 		c2         = NewMemory(10, int64(10<<20), -1)
-		fn2        = NewFunc(c2, time.Second, time.Minute)
+		fn2        = NewFunc(c2, time.Second, time.Second, time.Minute)
 		ctx        = context.Background()
 		m          = 10
 		n          = 10

@@ -10,6 +10,7 @@ import (
 
 type HTTP struct {
 	Cache    Cache
+	WaitFor  time.Duration
 	FreshFor time.Duration
 	TTL      time.Duration
 
@@ -48,7 +49,7 @@ func (h HTTP) Handler(next http.Handler) http.Handler {
 				err = NoCache
 			}
 			return
-		}, h.FreshFor, h.TTL); err != nil || p == nil {
+		}, h.WaitFor, h.FreshFor, h.TTL); err != nil || p == nil {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -60,9 +61,10 @@ func (h HTTP) Handler(next http.Handler) http.Handler {
 	})
 }
 
-func NewHTTP(c Cache, freshFor, ttl time.Duration) *HTTP {
+func NewHTTP(c Cache, waitFor, freshFor, ttl time.Duration) *HTTP {
 	return &HTTP{
 		Cache:    c,
+		WaitFor:  waitFor,
 		FreshFor: freshFor,
 		TTL:      ttl,
 		AcceptRequest: func(r *http.Request) bool {

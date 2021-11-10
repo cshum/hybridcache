@@ -30,7 +30,7 @@ func TestHTTP_Handler(t *testing.T) {
 		w.Write([]byte(fmt.Sprintf("value %v", counter)))
 	})
 
-	c := NewHTTP(NewMemory(10, int64(10<<20), -1), time.Minute, time.Hour)
+	c := NewHTTP(NewMemory(10, int64(10<<20), -1), time.Second, time.Minute, time.Hour)
 	c.RequestKey = func(r *http.Request) string {
 		sortQueryString(r.URL)
 		return r.URL.String()

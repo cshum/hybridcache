@@ -8,6 +8,7 @@ import (
 
 type Func struct {
 	Cache    Cache
+	WaitFor  time.Duration
 	FreshFor time.Duration
 	TTL      time.Duration
 
@@ -27,7 +28,7 @@ func (f Func) DoBytes(
 		}
 		p = newPayload(b)
 		return
-	}, f.FreshFor, f.TTL); err != nil {
+	}, f.WaitFor, f.FreshFor, f.TTL); err != nil {
 		return
 	}
 	value = p.Value
@@ -54,12 +55,12 @@ func (f Func) Do(
 		p = newPayload(b)
 		return
 	}
-	if p, err = do(ctx, f.Cache, key, pfn, f.FreshFor, f.TTL); err != nil {
+	if p, err = do(ctx, f.Cache, key, pfn, f.WaitFor, f.FreshFor, f.TTL); err != nil {
 		return
 	}
 	if err = f.unmarshal(p.Value, v); err != nil {
 		// cache payload valid but value corrupted, get live and try once more
-		if p, err = doCall(ctx, f.Cache, key, pfn, f.FreshFor, f.TTL); err != nil {
+		if p, err = doCall(ctx, f.Cache, key, pfn, f.WaitFor, f.FreshFor, f.TTL); err != nil {
 			return
 		}
 		if err = f.unmarshal(p.Value, v); err != nil {
@@ -85,9 +86,10 @@ func (f Func) unmarshal(b []byte, v interface{}) (err error) {
 	}
 }
 
-func NewFunc(c Cache, freshFor, ttl time.Duration) *Func {
+func NewFunc(c Cache, waitFor, freshFor, ttl time.Duration) *Func {
 	return &Func{
 		Cache:    c,
+		WaitFor:  waitFor,
 		FreshFor: freshFor,
 		TTL:      ttl,
 	}
