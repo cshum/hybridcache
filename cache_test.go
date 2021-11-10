@@ -53,7 +53,7 @@ func DoTestRace(t *testing.T, c Cache) {
 				g.Go(func() error {
 					if b, err := c.Race(j, func() ([]byte, error) {
 						called <- 1
-						time.Sleep(time.Millisecond)
+						time.Sleep(time.Millisecond * 100)
 						return []byte(j), nil
 					}); err != nil || string(b) != j {
 						t.Error(string(b), err, "value should be "+j)

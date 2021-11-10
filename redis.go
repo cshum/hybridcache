@@ -7,7 +7,7 @@ import (
 )
 
 type Redis struct {
-	Group
+	Group  // todo use redis lock for racing mechanisms
 	Pool   *redis.Pool
 	Prefix string
 }
@@ -18,25 +18,53 @@ func NewRedis(pool *redis.Pool) *Redis {
 	}
 }
 
-func (r *Redis) Get(key string) (res []byte, err error) {
-	var c = r.Pool.Get()
-	defer c.Close()
-	res, err = redis.Bytes(c.Do("GET", r.Prefix+key))
+func (c *Redis) Get(key string) (res []byte, err error) {
+	var conn = c.Pool.Get()
+	defer conn.Close()
+	res, err = redis.Bytes(conn.Do("GET", c.Prefix+key))
 	if err == redis.ErrNil {
 		err = NotFound
 	}
 	return
 }
 
-func (r *Redis) Fetch(key string) ([]byte, error) {
-	return r.Get(key)
+func (c *Redis) GetWithTTL(key string) (value []byte, ttl time.Duration, err error) {
+	var conn = c.Pool.Get()
+	defer conn.Close()
+	if err = conn.Send("GET", c.Prefix+key); err != nil {
+		return
+	}
+	if err = conn.Send("PTTL", c.Prefix+key); err != nil {
+		return
+	}
+	if err = conn.Flush(); err != nil {
+		return
+	}
+	if value, err = redis.Bytes(conn.Receive()); err != nil {
+		if err == redis.ErrNil {
+			err = NotFound
+		}
+		return
+	}
+	var pTTL int64
+	if pTTL, err = redis.Int64(conn.Receive()); err != nil {
+		return
+	}
+	ttl = fromMilliseconds(pTTL)
+	return
 }
 
-func (r *Redis) Set(key string, value []byte, ttl time.Duration) error {
-	var c = r.Pool.Get()
-	defer c.Close()
-	_, err := c.Do("PSETEX", r.Prefix+key, toMilliseconds(ttl), value)
-	return err
+func (c *Redis) Fetch(key string) ([]byte, error) {
+	return c.Get(key)
+}
+
+func (c *Redis) Set(key string, value []byte, ttl time.Duration) error {
+	var conn = c.Pool.Get()
+	defer conn.Close()
+	if _, err := conn.Do("PSETEX", c.Prefix+key, toMilliseconds(ttl), value); err != nil {
+		return err
+	}
+	return nil
 }
 
 func toMilliseconds(d time.Duration) int64 {

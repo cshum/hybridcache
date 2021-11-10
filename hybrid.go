@@ -7,15 +7,15 @@ import (
 )
 
 type Hybrid struct {
-	Group
-	Pool   *redis.Pool
-	Prefix string
-	Cache  Cache
+	Redis
+	Cache
 }
 
 func NewHybrid(redis *redis.Pool, cache Cache) *Hybrid {
 	return &Hybrid{
-		Pool:  redis,
+		Redis: Redis{
+			Pool: redis,
+		},
 		Cache: cache,
 	}
 }
@@ -29,30 +29,12 @@ func (c *Hybrid) Get(key string) (value []byte, err error) {
 }
 
 func (c *Hybrid) Fetch(key string) (value []byte, err error) {
-	var conn = c.Pool.Get()
-	defer conn.Close()
-	if err = conn.Send("GET", c.Prefix+key); err != nil {
+	var ttl time.Duration
+	if value, ttl, err = c.Redis.GetWithTTL(key); err != nil {
 		return
 	}
-	if err = conn.Send("PTTL", c.Prefix+key); err != nil {
-		return
-	}
-	if err = conn.Flush(); err != nil {
-		return
-	}
-	if value, err = redis.Bytes(conn.Receive()); err != nil {
-		if err == redis.ErrNil {
-			err = NotFound
-		}
-		return
-	}
-	var pTTL int64
-	if pTTL, err = redis.Int64(conn.Receive()); err != nil {
-		return
-	}
-	if pTTL > 0 {
-		// if redis item has ttl then re-cache
-		if err = c.Cache.Set(key, value, fromMilliseconds(pTTL)); err != nil {
+	if ttl > 0 {
+		if err = c.Cache.Set(key, value, ttl); err != nil {
 			return
 		}
 	}
@@ -63,10 +45,11 @@ func (c *Hybrid) Set(key string, value []byte, ttl time.Duration) error {
 	if err := c.Cache.Set(key, value, ttl); err != nil {
 		return err
 	}
-	var conn = c.Pool.Get()
-	defer conn.Close()
-	if _, err := conn.Do("PSETEX", c.Prefix+key, toMilliseconds(ttl), value); err != nil {
-		return err
-	}
-	return nil
+	return c.Redis.Set(key, value, ttl)
+}
+
+func (c *Hybrid) Race(key string, fn func() ([]byte, error)) ([]byte, error) {
+	return c.Cache.Race(key, func() ([]byte, error) {
+		return c.Redis.Race(key, fn)
+	})
 }
