@@ -1,6 +1,9 @@
 package cache
 
 import (
+	"context"
+	"golang.org/x/sync/errgroup"
+	"strconv"
 	"testing"
 	"time"
 
@@ -32,6 +35,44 @@ func DoTestCache(t *testing.T, c Cache) {
 	time.Sleep(time.Millisecond * 100)
 	if v, err := c.Get("a"); v != nil || err != NotFound {
 		t.Error(v, err, "should value nil and err not found")
+	}
+	DoTestRace(t, c)
+}
+
+func DoTestRace(t *testing.T, c Cache) {
+	var (
+		m         = 10
+		n         = 10
+		called    = make(chan int, n*m)
+		responded = make(chan int, n*m)
+		g, _      = errgroup.WithContext(context.Background())
+	)
+	for i := 0; i < m; i++ {
+		for j := 0; j < n; j++ {
+			(func(j string) {
+				g.Go(func() error {
+					if b, err := c.Race(j, func() ([]byte, error) {
+						called <- 1
+						time.Sleep(time.Millisecond)
+						return []byte(j), nil
+					}); err != nil || string(b) != j {
+						t.Error(string(b), err, "value should be "+j)
+						return nil
+					}
+					responded <- 1
+					return nil
+				})
+			})(strconv.Itoa(j))
+		}
+	}
+	if err := g.Wait(); err != nil {
+		t.Error(err)
+	}
+	if len(called) != m {
+		t.Error(len(called), "should not duplicate concurrent calls")
+	}
+	if len(responded) != m*n {
+		t.Error(len(responded), "should complete response")
 	}
 }
 

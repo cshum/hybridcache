@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"golang.org/x/sync/errgroup"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -155,50 +156,53 @@ func TestFunc_Do_Concurrent(t *testing.T) {
 		c2         = NewMemory(10, int64(10<<20), -1)
 		fn2        = NewFunc(c2, time.Second, time.Minute)
 		ctx        = context.Background()
-		n          = 100
-		called1    = make(chan int, n)
-		responded1 = make(chan int, n)
-		called2    = make(chan int, n)
-		responded2 = make(chan int, n)
+		m          = 10
+		n          = 10
+		called1    = make(chan int, n*m)
+		responded1 = make(chan int, n*m)
+		called2    = make(chan int, n*m)
+		responded2 = make(chan int, n*m)
 	)
-	g, gctx := errgroup.WithContext(ctx)
-	for i := 0; i < n; i++ {
-		g.Go(func() error {
-			var val string
-			if err := fn1.Do(gctx, "a", func(_ context.Context) (interface{}, error) {
-				time.Sleep(time.Millisecond * 10)
-				called1 <- 1
-				return "foo", nil
-			}, &val); err != nil || val != "foo" {
-				t.Error(val, err, "wrong value")
-				return nil
-			}
-			responded1 <- 1
-			return nil
-		})
-	}
-	for j := 0; j < n; j++ {
-		g.Go(func() error {
-			var val string
-			if err := fn2.Do(gctx, "a", func(_ context.Context) (interface{}, error) {
-				time.Sleep(time.Millisecond * 10)
-				called2 <- 1
-				return "bar", nil
-			}, &val); err != nil || val != "bar" {
-				t.Error(val, err, "wrong value")
-				return nil
-			}
-			responded2 <- 1
-			return nil
-		})
+	g, ctx := errgroup.WithContext(ctx)
+	for i := 0; i < m; i++ {
+		for j := 0; j < n; j++ {
+			(func(j string) {
+				g.Go(func() error {
+					var val string
+					if err := fn1.Do(ctx, j, func(_ context.Context) (interface{}, error) {
+						time.Sleep(time.Millisecond)
+						called1 <- 1
+						return "foo" + j, nil
+					}, &val); err != nil || val != "foo"+j {
+						t.Error(val, err, "wrong value")
+						return nil
+					}
+					responded1 <- 1
+					return nil
+				})
+				g.Go(func() error {
+					var val string
+					if err := fn2.Do(ctx, j, func(_ context.Context) (interface{}, error) {
+						time.Sleep(time.Millisecond)
+						called2 <- 1
+						return "bar" + j, nil
+					}, &val); err != nil || val != "bar"+j {
+						t.Error(val, err, "wrong value")
+						return nil
+					}
+					responded2 <- 1
+					return nil
+				})
+			})(strconv.Itoa(j))
+		}
 	}
 	if err := g.Wait(); err != nil {
 		t.Error(err)
 	}
-	if len(called1) != 1 || len(called2) != 1 {
+	if len(called1) != m || len(called2) != m {
 		t.Error(len(called1), len(called2), "should not duplicate concurrent calls")
 	}
-	if len(responded1) != 100 || len(responded2) != 100 {
+	if len(responded1) != m*n || len(responded2) != m*n {
 		t.Error(len(responded1), len(responded2), "should complete response")
 	}
 }
