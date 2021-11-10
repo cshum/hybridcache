@@ -44,29 +44,26 @@ func doCall(
 	fn func(context.Context) (*payload, error),
 	waitFor, freshFor, ttl time.Duration,
 ) (*payload, error) {
-	var cancel func()
-	if freshFor > 0 {
-		ctx, cancel = context.WithTimeout(ctx, freshFor)
-		defer cancel()
-	}
 	return parse(c.Race(key, func() ([]byte, error) {
-		p, err := fn(ctx)
-		if err != nil {
-			if p != nil && err == NoCache {
-				return unparse(p)
+		return callWithTimeout(ctx, func(ctx context.Context) ([]byte, error) {
+			p, err := fn(ctx)
+			if err != nil {
+				if p != nil && err == NoCache {
+					return unparse(p)
+				}
+				return nil, err
 			}
-			return nil, err
-		}
-		if p == nil {
-			return nil, NotFound
-		}
-		p.FreshFor(freshFor)
-		b, err := unparse(p)
-		if err != nil {
-			return nil, err
-		}
-		_ = c.Set(key, b, ttl)
-		return b, nil
+			if p == nil {
+				return nil, NotFound
+			}
+			p.FreshFor(freshFor)
+			b, err := unparse(p)
+			if err != nil {
+				return nil, err
+			}
+			_ = c.Set(key, b, ttl)
+			return b, nil
+		}, waitFor)
 	}, waitFor))
 }
 
@@ -96,4 +93,29 @@ func unparse(p *payload) (b []byte, err error) {
 		return
 	}
 	return
+}
+
+type chanRes struct {
+	Res []byte
+	Err error
+}
+
+func callWithTimeout(
+	ctx context.Context, fn func(ctx context.Context) ([]byte, error),
+	waitFor time.Duration,
+) ([]byte, error) {
+	var cancel func()
+	ctx, cancel = context.WithTimeout(ctx, waitFor)
+	defer cancel()
+	ch := make(chan chanRes, 1)
+	go func() {
+		b, err := fn(ctx)
+		ch <- chanRes{b, err}
+	}()
+	select {
+	case res := <-ch:
+		return res.Res, res.Err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }

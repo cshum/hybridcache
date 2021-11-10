@@ -147,6 +147,12 @@ func TestFuncDo(t *testing.T) {
 	}, &val); err != nil || val != "c2" {
 		t.Error(val, err, "NoCache handling")
 	}
+	if err = fn1.Do(ctx, "loooong", func(ctx context.Context) (interface{}, error) {
+		time.Sleep(time.Second)
+		return "dead", nil
+	}, &val); err == nil || val == "dead" {
+		t.Error(val, err, "should timeout")
+	}
 }
 
 func TestFunc_Do_Concurrent(t *testing.T) {
