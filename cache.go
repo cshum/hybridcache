@@ -10,7 +10,7 @@ type Cache interface {
 	Fetch(key string) ([]byte, error)
 	Set(key string, value []byte, ttl time.Duration) error
 
-	Race(key string, fn func() (interface{}, error)) (interface{}, error)
+	Race(key string, fn func() ([]byte, error)) ([]byte, error)
 }
 
 var NotFound = errors.New("hybrid cache: not found")

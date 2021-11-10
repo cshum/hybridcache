@@ -139,6 +139,7 @@ func TestHTTP_Handler(t *testing.T) {
 			if !reflect.DeepEqual(w.Body.String(), tt.wantBody) {
 				t.Errorf(" = %v, want %v", w.Body.String(), tt.wantBody)
 			}
+			time.Sleep(time.Millisecond)
 		})
 	}
 }

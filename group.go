@@ -6,10 +6,10 @@ type Group struct {
 	g singleflight.Group
 }
 
-func (r *Group) Race(
-	key string, fn func() (interface{}, error),
-) (v interface{}, err error) {
-	v, err, _ = r.g.Do(key, fn)
-	r.g.Forget(key)
-	return
+func (g *Group) Race(key string, fn func() ([]byte, error)) ([]byte, error) {
+	v, err, _ := g.g.Do(key, func() (interface{}, error) {
+		return fn()
+	})
+	g.g.Forget(key)
+	return v.([]byte), err
 }

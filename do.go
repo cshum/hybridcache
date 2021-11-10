@@ -12,7 +12,7 @@ func do(
 	fn func(context.Context) (*payload, error),
 	freshFor, ttl time.Duration,
 ) (p *payload, err error) {
-	if v, err_ := get(c, key); err_ == nil {
+	if v, err_ := parse(c.Get(key)); err_ == nil {
 		p = v
 		if v.NeedRefresh() {
 			ctx = DetachContext(ctx)
@@ -22,7 +22,7 @@ func do(
 						// todo log panic
 					}
 				}()
-				if v, err_ := fetch(c, key); err_ == nil {
+				if v, err_ := parse(c.Fetch(key)); err_ == nil {
 					if !v.NeedRefresh() {
 						return
 					}
@@ -42,11 +42,11 @@ func doCall(
 	fn func(context.Context) (*payload, error),
 	freshFor, ttl time.Duration,
 ) (*payload, error) {
-	v, err := c.Race(key, func() (interface{}, error) {
+	return parse(c.Race(key, func() ([]byte, error) {
 		p, err := fn(ctx)
 		if err != nil {
 			if p != nil && err == NoCache {
-				return p, nil
+				return unparse(p)
 			}
 			return nil, err
 		}
@@ -54,32 +54,13 @@ func doCall(
 			return nil, NotFound
 		}
 		p.FreshFor(freshFor)
-		_ = set(c, key, p, ttl)
-		return p, nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return v.(*payload), nil
-}
-
-func set(c Cache, key string, p *payload, ttl time.Duration) error {
-	if p == nil || !p.IsValid() {
-		return nil
-	}
-	b, err := msgpack.Marshal(p)
-	if err != nil {
-		return err
-	}
-	return c.Set(key, b, ttl)
-}
-
-func get(c Cache, key string) (p *payload, err error) {
-	return parse(c.Get(key))
-}
-
-func fetch(c Cache, key string) (p *payload, err error) {
-	return parse(c.Fetch(key))
+		b, err := unparse(p)
+		if err != nil {
+			return nil, err
+		}
+		_ = c.Set(key, b, ttl)
+		return b, nil
+	}))
 }
 
 func parse(val []byte, e error) (p *payload, err error) {
@@ -94,6 +75,17 @@ func parse(val []byte, e error) (p *payload, err error) {
 	if !p.IsValid() {
 		err = NotFound
 		p = nil
+		return
+	}
+	return
+}
+
+func unparse(p *payload) (b []byte, err error) {
+	if p == nil || !p.IsValid() {
+		err = NotFound
+		return
+	}
+	if b, err = msgpack.Marshal(p); err != nil {
 		return
 	}
 	return
