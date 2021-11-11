@@ -102,13 +102,13 @@ type chanRes struct {
 func callWithTimeout(
 	ctx context.Context,
 	fn func(ctx context.Context) ([]byte, error),
-	waitFor time.Duration,
+	timeout time.Duration,
 ) ([]byte, error) {
 	var (
 		cancel func()
 		ch     = make(chan chanRes, 1)
 	)
-	ctx, cancel = context.WithTimeout(ctx, waitFor)
+	ctx, cancel = context.WithTimeout(ctx, timeout)
 	defer cancel()
 	go func() {
 		defer func() {

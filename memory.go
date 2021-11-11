@@ -1,13 +1,14 @@
 package cache
 
 import (
+	"golang.org/x/sync/singleflight"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
 )
 
 type Memory struct {
-	Group
+	g      singleflight.Group
 	Cache  *ristretto.Cache
 	MaxTTL time.Duration
 }
@@ -48,4 +49,17 @@ func (c *Memory) Set(key string, value []byte, ttl time.Duration) error {
 	}
 	c.Cache.SetWithTTL(key, value, int64(len(value)), ttl)
 	return nil
+}
+
+func (c *Memory) Race(
+	key string, fn func() ([]byte, error), _ time.Duration,
+) ([]byte, error) {
+	v, err, _ := c.g.Do(key, func() (interface{}, error) {
+		return fn()
+	})
+	c.g.Forget(key)
+	if v != nil {
+		return v.([]byte), err
+	}
+	return nil, err
 }

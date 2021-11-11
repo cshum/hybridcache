@@ -7,7 +7,6 @@ import (
 )
 
 type Redis struct {
-	Group  // todo use redis lock for race mechanism
 	Pool   *redis.Pool
 	Prefix string
 }
@@ -61,6 +60,12 @@ func (c *Redis) Set(key string, value []byte, ttl time.Duration) error {
 		return err
 	}
 	return nil
+}
+
+func (c *Redis) Race(
+	key string, fn func() ([]byte, error), waitFor time.Duration,
+) ([]byte, error) {
+	return fn()
 }
 
 func toMilliseconds(d time.Duration) int64 {
