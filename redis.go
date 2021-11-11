@@ -13,6 +13,7 @@ import (
 const (
 	minRetryDelayMilliSec = 50
 	maxRetryDelayMilliSec = 250
+	waitVal               = "!wait!"
 )
 
 type Redis struct {
@@ -109,7 +110,7 @@ func (c *Redis) Race(
 			}
 			return
 		}
-		if len(resp) > 4 { // not "WAIT"
+		if string(resp) != waitVal {
 			value, err = c.unparseLockValue(resp)
 			return
 		}
@@ -126,7 +127,7 @@ func (c *Redis) lock(
 ) (value []byte, locked bool, err error) {
 	var conn = c.Pool.Get()
 	defer conn.Close()
-	if err = conn.Send("SET", key, "WAIT", "PX", toMilliSec(timeout), "NX"); err != nil {
+	if err = conn.Send("SET", key, waitVal, "PX", toMilliSec(timeout), "NX"); err != nil {
 		return
 	}
 	if err = conn.Send("GET", key); err != nil {

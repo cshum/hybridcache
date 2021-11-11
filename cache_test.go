@@ -67,13 +67,34 @@ func DoTestRace(t *testing.T, c Cache) {
 		for j := 0; j < n; j++ {
 			(func(j string) {
 				g.Go(func() error {
-					if b, err := c.Race(j, func() ([]byte, error) {
+					b, err := c.Race(j, func() ([]byte, error) {
 						called <- 1
 						time.Sleep(time.Millisecond * 10)
+						if j == "3" {
+							return []byte(j), ErrNoCache
+						} else if j == "4" {
+							return nil, ErrNotFound
+						} else if j == "5" {
+							return nil, context.DeadlineExceeded
+						}
 						return []byte(j), nil
-					}, time.Second); err != nil || string(b) != j {
-						t.Error(string(b), err, "value should be "+j)
-						return nil
+					}, time.Second)
+					if j == "3" {
+						if err != ErrNoCache || string(b) != j {
+							t.Error(string(b), err, "error err parsing")
+						}
+					} else if j == "4" {
+						if err != ErrNotFound || b != nil {
+							t.Error(string(b), err, "error err parsing")
+						}
+					} else if j == "5" {
+						if err != context.DeadlineExceeded || b != nil {
+							t.Error(string(b), err, "error err parsing")
+						}
+					} else {
+						if err != nil || string(b) != j {
+							t.Error(string(b), err, "value should be "+j)
+						}
 					}
 					responded <- 1
 					return nil
