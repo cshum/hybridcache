@@ -15,18 +15,6 @@ const (
 	maxRetryDelayMilliSec = 250
 )
 
-type lockRes struct {
-	_msgpack      struct{} `msgpack:",omitempty"`
-	Res           []byte
-	Err           error
-	IsErrNotFound bool
-	IsErrTimeout  bool
-	IsErrNoCache  bool
-	IsErrNoRows   bool
-	IsErrConnDone bool
-	IsErrTxDone   bool
-}
-
 type Redis struct {
 	Pool *redis.Pool
 
@@ -34,9 +22,19 @@ type Redis struct {
 
 	LockPrefix string
 
+	ErrorMapper func(error) error
+
 	// DelayFunc is used to decide the amount of time to wait between lock retries.
 	DelayFunc func(tries int) time.Duration
 }
+
+type lockRes struct {
+	_msgpack struct{} `msgpack:",omitempty"`
+	Res      []byte
+	Err      error
+}
+
+var errMapper = getErrorMapper()
 
 func NewRedis(pool *redis.Pool) *Redis {
 	return &Redis{
@@ -111,8 +109,8 @@ func (c *Redis) Race(
 			}
 			return
 		}
-		if len(resp) > 2 {
-			value, err = unparseLockValue(resp)
+		if len(resp) > 4 { // not "WAIT"
+			value, err = c.unparseLockValue(resp)
 			return
 		}
 		time.Sleep(c.delayFunc(retries))
@@ -128,7 +126,7 @@ func (c *Redis) lock(
 ) (value []byte, locked bool, err error) {
 	var conn = c.Pool.Get()
 	defer conn.Close()
-	if err = conn.Send("SET", key, "OK", "PX", toMilliSec(timeout), "NX"); err != nil {
+	if err = conn.Send("SET", key, "WAIT", "PX", toMilliSec(timeout), "NX"); err != nil {
 		return
 	}
 	if err = conn.Send("GET", key); err != nil {
@@ -153,20 +151,6 @@ func (c *Redis) setLockValue(
 		p = &lockRes{Res: value, Err: e}
 		b []byte
 	)
-	switch e {
-	case ErrNotFound:
-		p.IsErrNotFound = true
-	case ErrNoCache:
-		p.IsErrNoCache = true
-	case context.DeadlineExceeded:
-		p.IsErrTimeout = true
-	case sql.ErrNoRows:
-		p.IsErrNoRows = true
-	case sql.ErrConnDone:
-		p.IsErrConnDone = true
-	case sql.ErrTxDone:
-		p.IsErrTxDone = true
-	}
 	if b, err = msgpack.Marshal(p); err != nil {
 		return
 	}
@@ -176,27 +160,13 @@ func (c *Redis) setLockValue(
 	return
 }
 
-func unparseLockValue(resp []byte) (value []byte, err error) {
+func (c *Redis) unparseLockValue(resp []byte) (value []byte, err error) {
 	p := &lockRes{}
 	if err = msgpack.Unmarshal(resp, p); err != nil {
 		return
 	}
 	value = p.Res
-	if p.IsErrNotFound {
-		err = ErrNotFound
-	} else if p.IsErrTimeout {
-		err = context.DeadlineExceeded
-	} else if p.IsErrNoCache {
-		err = ErrNoCache
-	} else if p.IsErrNoRows {
-		err = sql.ErrNoRows
-	} else if p.IsErrTxDone {
-		err = sql.ErrTxDone
-	} else if p.IsErrConnDone {
-		err = sql.ErrConnDone
-	} else {
-		err = p.Err
-	}
+	err = c.errorMapper(p.Err)
 	return
 }
 
@@ -222,4 +192,38 @@ func toMilliSec(d time.Duration) int64 {
 
 func fromMilliSec(pTTL int64) time.Duration {
 	return time.Duration(pTTL) * time.Millisecond
+}
+
+func (c *Redis) errorMapper(err error) error {
+	if err == nil {
+		return nil
+	}
+	if c.ErrorMapper != nil {
+		if e := c.ErrorMapper(err); e != err && e != nil {
+			return e
+		}
+	}
+	if e, ok := errMapper[err.Error()]; ok {
+		return e
+	}
+	return err
+}
+
+func getErrorMapper() map[string]error {
+	// map common errors to their original
+	errMapper := map[string]error{}
+	for _, err := range []error{
+		ErrNotFound,
+		ErrNoCache,
+		context.Canceled,
+		context.DeadlineExceeded,
+		sql.ErrNoRows,
+		sql.ErrTxDone,
+		sql.ErrConnDone,
+		redis.ErrNil,
+		redis.ErrPoolExhausted,
+	} {
+		errMapper[err.Error()] = err
+	}
+	return errMapper
 }
