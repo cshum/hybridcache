@@ -47,9 +47,9 @@ func (c *Hybrid) Set(key string, value []byte, ttl time.Duration) error {
 }
 
 func (c *Hybrid) Race(
-	key string, fn func() ([]byte, error), waitFor time.Duration,
+	key string, fn func() ([]byte, error), timeout time.Duration,
 ) ([]byte, error) {
 	return c.Downstream.Race(key, func() ([]byte, error) {
-		return c.Upstream.Race(key, fn, waitFor)
-	}, waitFor)
+		return c.Upstream.Race(key, fn, timeout)
+	}, timeout)
 }

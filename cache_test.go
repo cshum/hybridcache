@@ -10,7 +10,25 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
+var redisCache *Redis
+
+func init() {
+	redisCache = NewRedis(&redis.Pool{
+		Dial: func() (conn redis.Conn, err error) {
+			return redis.Dial("tcp", ":6379")
+		},
+	})
+	redisCache.DelayFunc = func(tries int) time.Duration {
+		return time.Microsecond * time.Duration(tries)
+	}
+}
+
 func DoTestCache(t *testing.T, c Cache) {
+	DoTestCommon(t, c)
+	DoTestRace(t, c)
+}
+
+func DoTestCommon(t *testing.T, c Cache) {
 	// not found
 	if v, err := c.Get("a"); v != nil || err != NotFound {
 		t.Error(err, "should value nil and err not found")
@@ -36,7 +54,6 @@ func DoTestCache(t *testing.T, c Cache) {
 	if v, err := c.Get("a"); v != nil || err != NotFound {
 		t.Error(v, err, "should value nil and err not found")
 	}
-	DoTestRace(t, c)
 }
 
 func DoTestRace(t *testing.T, c Cache) {
@@ -81,31 +98,19 @@ func TestMemory(t *testing.T) {
 }
 
 func TestRedis(t *testing.T) {
-	DoTestCache(t, NewRedis(&redis.Pool{
-		Dial: func() (conn redis.Conn, err error) {
-			return redis.Dial("tcp", ":6379")
-		},
-	}))
+	DoTestCache(t, redisCache)
 }
 
 func TestHybrid(t *testing.T) {
 	DoTestCache(t, NewHybrid(
-		NewRedis(&redis.Pool{
-			Dial: func() (conn redis.Conn, err error) {
-				return redis.Dial("tcp", ":6379")
-			},
-		}),
+		redisCache,
 		NewMemory(10, int64(10<<20), time.Minute*1),
 	))
 }
 
 func TestHybridRedis(t *testing.T) {
 	DoTestCache(t, NewHybrid(
-		NewRedis(&redis.Pool{
-			Dial: func() (conn redis.Conn, err error) {
-				return redis.Dial("tcp", ":6379")
-			},
-		}),
+		redisCache,
 		NewMemory(10, int64(10<<20), time.Nanosecond)),
 	)
 }

@@ -1,14 +1,24 @@
 package cache
 
 import (
+	"math/rand"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
 )
 
+const (
+	minRetryDelayMilliSec = 50
+	maxRetryDelayMilliSec = 250
+)
+
 type Redis struct {
-	Pool   *redis.Pool
-	Prefix string
+	Pool       *redis.Pool
+	Prefix     string
+	LockPrefix string
+
+	// DelayFunc is used to decide the amount of time to wait between lock retries.
+	DelayFunc func(tries int) time.Duration
 }
 
 func NewRedis(pool *redis.Pool) *Redis {
@@ -63,9 +73,18 @@ func (c *Redis) Set(key string, value []byte, ttl time.Duration) error {
 }
 
 func (c *Redis) Race(
-	key string, fn func() ([]byte, error), waitFor time.Duration,
+	key string, fn func() ([]byte, error), timeout time.Duration,
 ) ([]byte, error) {
 	return fn()
+}
+
+func (c *Redis) delayFunc(retries int) time.Duration {
+	if c.DelayFunc != nil {
+		return c.DelayFunc(retries)
+	}
+	return time.Duration(rand.Intn(
+		maxRetryDelayMilliSec-minRetryDelayMilliSec,
+	)+minRetryDelayMilliSec) * time.Millisecond
 }
 
 func toMilliseconds(d time.Duration) int64 {
