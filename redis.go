@@ -155,7 +155,9 @@ func (c *Redis) setLockValue(
 	if b, err = msgpack.Marshal(p); err != nil {
 		return
 	}
-	if err = c.Set(key, b, ttl); err != nil {
+	var conn = c.Pool.Get()
+	defer conn.Close()
+	if _, err = conn.Do("PSETEX", key, toMilliSec(ttl), b); err != nil {
 		return
 	}
 	return
