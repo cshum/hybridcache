@@ -11,22 +11,32 @@ import (
 )
 
 const (
-	minRetryDelayMilliSec = 50
-	maxRetryDelayMilliSec = 250
-	waitVal               = "!wait!"
+	defaultMinRetryDelayMilliSec = 50
+	defaultMaxRetryDelayMilliSec = 250
+	defaultSuppressionTTL        = time.Second * 3
+	defaultLockPrefix            = "!lock!"
+	waitVal                      = "!wait!"
 )
 
 type Redis struct {
+	// Redigo redis Pool
 	Pool *redis.Pool
 
+	// Key Prefix
 	Prefix string
 
+	// LockPrefix prefix of lock key, default "!lock!"
 	LockPrefix string
 
+	// ErrorMapper maps errors to its corresponding value during unmarshal
 	ErrorMapper func(error) error
 
 	// DelayFunc is used to decide the amount of time to wait between lock retries.
 	DelayFunc func(tries int) time.Duration
+
+	// SuppressionTTL ttl of value being kept for Race suppression
+	// default to 3 seconds. Should be a value larger than the maximum DelayFunc.
+	SuppressionTTL time.Duration
 }
 
 type lockRes struct {
@@ -109,13 +119,13 @@ func (c *Redis) Race(
 		}
 		if locked {
 			value, err = fn()
-			if e = c.setLockValue(key, value, err, timeout); e != nil {
+			if e = c.setSuppression(key, value, err); e != nil {
 				err = e
 			}
 			return
 		}
 		if string(resp) != waitVal {
-			value, err = c.unparseLockValue(resp)
+			value, err = c.parseSuppression(resp)
 			return
 		}
 		time.Sleep(c.delayFunc(retries))
@@ -149,13 +159,15 @@ func (c *Redis) lock(
 	return
 }
 
-func (c *Redis) setLockValue(
-	key string, value []byte, e error, ttl time.Duration,
-) (err error) {
+func (c *Redis) setSuppression(key string, value []byte, e error) (err error) {
 	var (
-		p = &lockRes{Res: value, Err: e}
-		b []byte
+		p   = &lockRes{Res: value, Err: e}
+		b   []byte
+		ttl = defaultSuppressionTTL
 	)
+	if c.SuppressionTTL > 0 {
+		ttl = c.SuppressionTTL
+	}
 	if b, err = msgpack.Marshal(p); err != nil {
 		return
 	}
@@ -167,7 +179,7 @@ func (c *Redis) setLockValue(
 	return
 }
 
-func (c *Redis) unparseLockValue(resp []byte) (value []byte, err error) {
+func (c *Redis) parseSuppression(resp []byte) (value []byte, err error) {
 	p := &lockRes{}
 	if err = msgpack.Unmarshal(resp, p); err != nil {
 		return
@@ -181,7 +193,7 @@ func (c *Redis) lockKey(key string) string {
 	if c.LockPrefix != "" {
 		return c.LockPrefix + key
 	}
-	return "!lock!" + key
+	return defaultLockPrefix + key
 }
 
 func (c *Redis) delayFunc(retries int) time.Duration {
@@ -189,8 +201,8 @@ func (c *Redis) delayFunc(retries int) time.Duration {
 		return c.DelayFunc(retries)
 	}
 	return time.Duration(rand.Intn(
-		maxRetryDelayMilliSec-minRetryDelayMilliSec,
-	)+minRetryDelayMilliSec) * time.Millisecond
+		defaultMaxRetryDelayMilliSec-defaultMinRetryDelayMilliSec,
+	)+defaultMinRetryDelayMilliSec) * time.Millisecond
 }
 
 func toMilliSec(d time.Duration) int64 {
