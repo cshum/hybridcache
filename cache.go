@@ -12,6 +12,6 @@ type Cache interface {
 	Race(key string, fn func() ([]byte, error), timeout time.Duration) ([]byte, error)
 }
 
-var NotFound = errors.New("hybrid cache: not found")
+var ErrNotFound = errors.New("hybridcache: not found")
 
-var NoCache = errors.New("hybrid cache: no cache")
+var ErrNoCache = errors.New("hybridcache: no cache")

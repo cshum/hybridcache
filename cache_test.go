@@ -29,11 +29,11 @@ func DoTestCache(t *testing.T, c Cache) {
 
 func DoTestCommon(t *testing.T, c Cache) {
 	// not found
-	if v, err := c.Get("a"); v != nil || err != NotFound {
+	if v, err := c.Get("a"); v != nil || err != ErrNotFound {
 		t.Error(err, "should value nil and err not found")
 	}
 	time.Sleep(time.Millisecond)
-	if v, err := c.Get("a"); v != nil || err != NotFound {
+	if v, err := c.Get("a"); v != nil || err != ErrNotFound {
 		t.Error(err, "should value nil and err not found")
 	}
 	time.Sleep(time.Millisecond)
@@ -50,7 +50,7 @@ func DoTestCommon(t *testing.T, c Cache) {
 		t.Error(err, "should value and no error")
 	}
 	time.Sleep(time.Millisecond * 100)
-	if v, err := c.Get("a"); v != nil || err != NotFound {
+	if v, err := c.Get("a"); v != nil || err != ErrNotFound {
 		t.Error(v, err, "should value nil and err not found")
 	}
 }

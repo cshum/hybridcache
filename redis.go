@@ -2,7 +2,7 @@ package cache
 
 import (
 	"context"
-	"errors"
+	"database/sql"
 	"github.com/vmihailenco/msgpack/v5"
 	"math/rand"
 	"time"
@@ -16,8 +16,15 @@ const (
 )
 
 type lockRes struct {
-	Res []byte
-	Err string
+	_msgpack      struct{} `msgpack:",omitempty"`
+	Res           []byte
+	Err           error
+	IsErrNotFound bool
+	IsErrTimeout  bool
+	IsErrNoCache  bool
+	IsErrNoRows   bool
+	IsErrConnDone bool
+	IsErrTxDone   bool
 }
 
 type Redis struct {
@@ -42,7 +49,7 @@ func (c *Redis) Get(key string) (res []byte, err error) {
 	defer conn.Close()
 	res, err = redis.Bytes(conn.Do("GET", c.Prefix+key))
 	if err == redis.ErrNil {
-		err = NotFound
+		err = ErrNotFound
 	}
 	return
 }
@@ -61,7 +68,7 @@ func (c *Redis) Fetch(key string) (value []byte, ttl time.Duration, err error) {
 	}
 	if value, err = redis.Bytes(conn.Receive()); err != nil {
 		if err == redis.ErrNil {
-			err = NotFound
+			err = ErrNotFound
 		}
 		return
 	}
@@ -143,11 +150,22 @@ func (c *Redis) setLockValue(
 	key string, value []byte, e error, ttl time.Duration,
 ) (err error) {
 	var (
-		p = &lockRes{Res: value}
+		p = &lockRes{Res: value, Err: e}
 		b []byte
 	)
-	if e != nil {
-		p.Err = e.Error()
+	switch e {
+	case ErrNotFound:
+		p.IsErrNotFound = true
+	case ErrNoCache:
+		p.IsErrNoCache = true
+	case context.DeadlineExceeded:
+		p.IsErrTimeout = true
+	case sql.ErrNoRows:
+		p.IsErrNoRows = true
+	case sql.ErrConnDone:
+		p.IsErrConnDone = true
+	case sql.ErrTxDone:
+		p.IsErrTxDone = true
 	}
 	if b, err = msgpack.Marshal(p); err != nil {
 		return
@@ -164,8 +182,20 @@ func unparseLockValue(resp []byte) (value []byte, err error) {
 		return
 	}
 	value = p.Res
-	if p.Err != "" {
-		err = errors.New(p.Err)
+	if p.IsErrNotFound {
+		err = ErrNotFound
+	} else if p.IsErrTimeout {
+		err = context.DeadlineExceeded
+	} else if p.IsErrNoCache {
+		err = ErrNoCache
+	} else if p.IsErrNoRows {
+		err = sql.ErrNoRows
+	} else if p.IsErrTxDone {
+		err = sql.ErrTxDone
+	} else if p.IsErrConnDone {
+		err = sql.ErrConnDone
+	} else {
+		err = p.Err
 	}
 	return
 }

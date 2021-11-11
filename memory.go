@@ -32,7 +32,7 @@ func (c *Memory) Get(key string) ([]byte, error) {
 	if res, ok := c.Cache.Get(key); ok {
 		return res.([]byte), nil
 	}
-	return nil, NotFound
+	return nil, ErrNotFound
 }
 
 func (c *Memory) Fetch(key string) (value []byte, ttl time.Duration, err error) {

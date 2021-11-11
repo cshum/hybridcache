@@ -44,13 +44,13 @@ func doCall(
 		return callWithTimeout(ctx, func(ctx context.Context) ([]byte, error) {
 			p, err := fn(ctx)
 			if err != nil {
-				if p != nil && err == NoCache {
+				if p != nil && err == ErrNoCache {
 					return unparse(p)
 				}
 				return nil, err
 			}
 			if p == nil {
-				return nil, NotFound
+				return nil, ErrNotFound
 			}
 			p.FreshFor(freshFor)
 			b, err := unparse(p)
@@ -76,7 +76,7 @@ func parse(val []byte, e error) (p *payload, err error) {
 		return
 	}
 	if !p.IsValid() {
-		err = NotFound
+		err = ErrNotFound
 		p = nil
 		return
 	}
@@ -85,7 +85,7 @@ func parse(val []byte, e error) (p *payload, err error) {
 
 func unparse(p *payload) (b []byte, err error) {
 	if p == nil || !p.IsValid() {
-		err = NotFound
+		err = ErrNotFound
 		return
 	}
 	if b, err = msgpack.Marshal(p); err != nil {

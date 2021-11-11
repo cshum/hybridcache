@@ -61,19 +61,19 @@ func TestFuncDoBytes(t *testing.T) {
 	}
 	if val, err = fn1.DoBytes(ctx, "c", func(_ context.Context) ([]byte, error) {
 		if IsDetached(ctx) {
-			t.Error("NoCache should not detech")
+			t.Error("ErrNoCache should not detech")
 		}
-		return []byte("c1"), NoCache
+		return []byte("c1"), ErrNoCache
 	}); err != nil || string(val) != "c1" {
-		t.Error(val, err, "NoCache handling")
+		t.Error(val, err, "ErrNoCache handling")
 	}
 	if val, err = fn1.DoBytes(ctx, "c", func(_ context.Context) ([]byte, error) {
 		if IsDetached(ctx) {
-			t.Error("NoCache should not detech")
+			t.Error("ErrNoCache should not detech")
 		}
-		return []byte("c2"), NoCache
+		return []byte("c2"), ErrNoCache
 	}); err != nil || string(val) != "c2" {
-		t.Error(val, err, "NoCache handling")
+		t.Error(val, err, "ErrNoCache handling")
 	}
 }
 
@@ -133,19 +133,19 @@ func TestFuncDo(t *testing.T) {
 	}
 	if err = fn1.Do(ctx, "c", func(_ context.Context) (interface{}, error) {
 		if IsDetached(ctx) {
-			t.Error("NoCache should not detech")
+			t.Error("ErrNoCache should not detech")
 		}
-		return "c1", NoCache
+		return "c1", ErrNoCache
 	}, &val); err != nil || val != "c1" {
-		t.Error(val, err, "NoCache handling")
+		t.Error(val, err, "ErrNoCache handling")
 	}
 	if err = fn1.Do(ctx, "c", func(_ context.Context) (interface{}, error) {
 		if IsDetached(ctx) {
-			t.Error("NoCache should not detech")
+			t.Error("ErrNoCache should not detech")
 		}
-		return "c2", NoCache
+		return "c2", ErrNoCache
 	}, &val); err != nil || val != "c2" {
-		t.Error(val, err, "NoCache handling")
+		t.Error(val, err, "ErrNoCache handling")
 	}
 	if err = fn2.Do(ctx, "loooong", func(ctx context.Context) (interface{}, error) {
 		time.Sleep(time.Millisecond * 10)

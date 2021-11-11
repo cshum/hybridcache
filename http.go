@@ -47,7 +47,7 @@ func (h HTTP) Handler(next http.Handler) http.Handler {
 			p.Header = res.Header
 			p.StatusCode = res.StatusCode
 			if h.AcceptResponse != nil && !h.AcceptResponse(res) {
-				err = NoCache
+				err = ErrNoCache
 			}
 			return
 		}, h.WaitFor, h.FreshFor, h.TTL); err != nil || p == nil {
