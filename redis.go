@@ -13,8 +13,10 @@ const (
 )
 
 type Redis struct {
-	Pool       *redis.Pool
-	Prefix     string
+	Pool *redis.Pool
+
+	Prefix string
+
 	LockPrefix string
 
 	// DelayFunc is used to decide the amount of time to wait between lock retries.
@@ -76,6 +78,13 @@ func (c *Redis) Race(
 	key string, fn func() ([]byte, error), timeout time.Duration,
 ) ([]byte, error) {
 	return fn()
+}
+
+func (c *Redis) lockKey(key string) string {
+	if c.LockPrefix != "" {
+		return c.LockPrefix + key
+	}
+	return "!lock!" + key
 }
 
 func (c *Redis) delayFunc(retries int) time.Duration {
