@@ -33,9 +33,9 @@ type Redis struct {
 
 	// DisableSuppression disable call suppression for Race method,
 	// which result function to be executed immediately.
-	// You may want to disable it if you do not have a strong requirement
-	// of global call suppression, and the extra cost of redis lock
-	// may not seem to worth it.
+	// You may want to disable if you do not have a strong requirement of global call suppression,
+	// which the Memory call suppression (using Redis + Memory Hybrid) would be sufficient.
+	// Then the extra cost of redis lock may not seem to worth it.
 	DisableSuppression bool
 }
 
