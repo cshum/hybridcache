@@ -50,6 +50,7 @@ func (c *Hybrid) Race(
 	key string, fn func() ([]byte, error), timeout time.Duration,
 ) ([]byte, error) {
 	return c.Downstream.Race(key, func() ([]byte, error) {
+		// todo calc remaining timeout for upstream
 		return c.Upstream.Race(key, fn, timeout)
 	}, timeout)
 }
