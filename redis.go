@@ -95,17 +95,21 @@ func (c *Redis) Race(
 		resp        []byte
 		locked      bool
 		retries     int
+		e           error
 		ctx, cancel = context.WithTimeout(context.Background(), timeout)
 	)
 	defer cancel()
 	key = c.lockKey(key)
 	for {
-		if resp, locked, err = c.lock(key, timeout); err != nil {
+		if resp, locked, e = c.lock(key, timeout); e != nil {
+			// if redis upstream failed, handle directly
+			// instead of crashing downstream consumers
+			value, err = fn()
 			return
 		}
 		if locked {
 			value, err = fn()
-			if e := c.setLockValue(key, value, err, timeout); e != nil {
+			if e = c.setLockValue(key, value, err, timeout); e != nil {
 				err = e
 			}
 			return
