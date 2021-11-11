@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"fmt"
 	"github.com/vmihailenco/msgpack/v5"
 	"time"
 )
@@ -17,11 +18,6 @@ func do(
 		if v.NeedRefresh() {
 			ctx = DetachContext(ctx)
 			go func() {
-				defer func() {
-					if r := recover(); r != nil {
-						// todo log panic
-					}
-				}()
 				if b, _, err_ := c.Fetch(key); err_ == nil {
 					if v, err_ := parse(b, nil); err_ == nil {
 						if !v.NeedRefresh() {
@@ -107,11 +103,18 @@ func callWithTimeout(
 	ctx context.Context, fn func(ctx context.Context) ([]byte, error),
 	waitFor time.Duration,
 ) ([]byte, error) {
-	var cancel func()
+	var (
+		cancel func()
+		ch     = make(chan chanRes, 1)
+	)
 	ctx, cancel = context.WithTimeout(ctx, waitFor)
 	defer cancel()
-	ch := make(chan chanRes, 1)
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				ch <- chanRes{nil, fmt.Errorf("%v", r)}
+			}
+		}()
 		b, err := fn(ctx)
 		ch <- chanRes{b, err}
 	}()

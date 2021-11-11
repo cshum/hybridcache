@@ -159,6 +159,12 @@ func TestFuncDo(t *testing.T) {
 	}, &val); err != nil || val != "ok" {
 		t.Error(val, err, "last timeout should not set")
 	}
+	if err = fn2.Do(ctx, "die", func(ctx context.Context) (interface{}, error) {
+		panic("booommm")
+		return "ok", nil
+	}, &val); err == nil || err.Error() != "booommm" {
+		t.Error(val, err, "panic should result error")
+	}
 }
 
 func TestFunc_Do_Concurrent(t *testing.T) {
