@@ -9,17 +9,50 @@ import (
 )
 
 type HTTP struct {
-	Cache    Cache
-	WaitFor  time.Duration
-	FreshFor time.Duration
-	TTL      time.Duration
+	Cache Cache
 
-	RequestKey     func(*http.Request) string
-	AcceptRequest  func(*http.Request) bool
+	// WaitFor wait timeout for the func call to complete
+	WaitFor time.Duration
+
+	// FreshFor best-before duration of cache before the next refresh
+	FreshFor time.Duration
+
+	// TTL duration for cache to stay
+	TTL time.Duration
+
+	// RequestKey function generates string key from incoming request
+	// by default request URL is used as key
+	RequestKey func(*http.Request) string
+
+	// AcceptRequest optional function determine request should be handled
+	// by default only GET requests are handled
+	AcceptRequest func(*http.Request) bool
+
+	// AcceptResponse function determine response should be cached
+	// by default only status code < 400 response are cached
 	AcceptResponse func(*http.Response) bool
-	ErrorHandler   func(http.ResponseWriter, *http.Request, error)
+
+	// ErrorHandler function handles errors
+	// by default context deadline exceeded result 408 error, or 400 error for anything else
+	ErrorHandler func(http.ResponseWriter, *http.Request, error)
 }
 
+func NewHTTP(c Cache, waitFor, freshFor, ttl time.Duration) *HTTP {
+	return &HTTP{
+		Cache:    c,
+		WaitFor:  waitFor,
+		FreshFor: freshFor,
+		TTL:      ttl,
+		AcceptRequest: func(r *http.Request) bool {
+			return r.Method == http.MethodGet
+		},
+		AcceptResponse: func(res *http.Response) bool {
+			return res.StatusCode < 400
+		},
+	}
+}
+
+// Handler is the HTTP cache middleware handler
 func (h HTTP) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var (
@@ -66,19 +99,4 @@ func (h HTTP) Handler(next http.Handler) http.Handler {
 		w.WriteHeader(p.StatusCode)
 		_, _ = w.Write(p.Value)
 	})
-}
-
-func NewHTTP(c Cache, waitFor, freshFor, ttl time.Duration) *HTTP {
-	return &HTTP{
-		Cache:    c,
-		WaitFor:  waitFor,
-		FreshFor: freshFor,
-		TTL:      ttl,
-		AcceptRequest: func(r *http.Request) bool {
-			return r.Method == http.MethodGet
-		},
-		AcceptResponse: func(res *http.Response) bool {
-			return res.StatusCode < 400
-		},
-	}
 }

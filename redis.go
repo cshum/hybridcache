@@ -10,14 +10,6 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
-const (
-	defaultMinRetryDelayMilliSec = 50
-	defaultMaxRetryDelayMilliSec = 250
-	defaultSuppressionTTL        = time.Second * 3
-	defaultLockPrefix            = "!lock!"
-	waitVal                      = "!wait!"
-)
-
 type Redis struct {
 	// Redigo redis Pool
 	Pool *redis.Pool
@@ -35,9 +27,18 @@ type Redis struct {
 	DelayFunc func(tries int) time.Duration
 
 	// SuppressionTTL ttl of value being kept for Race suppression
-	// default to 3 seconds. Should be a value larger than the maximum DelayFunc.
+	// default to 3 seconds. Should be a value larger than maximum DelayFunc
+	// but smaller than minimum FreshFor duration
 	SuppressionTTL time.Duration
 }
+
+const (
+	defaultMinRetryDelayMilliSec = 50
+	defaultMaxRetryDelayMilliSec = 250
+	defaultSuppressionTTL        = time.Second * 3
+	defaultLockPrefix            = "!lock!"
+	waitVal                      = "!wait!"
+)
 
 type lockRes struct {
 	_msgpack struct{} `msgpack:",omitempty"`
