@@ -104,7 +104,7 @@ func (c *Redis) Race(
 			}
 			return
 		}
-		if len(resp) > 1 {
+		if len(resp) > 2 {
 			value, err = unparseLockValue(resp)
 			return
 		}
@@ -121,7 +121,7 @@ func (c *Redis) lock(
 ) (value []byte, locked bool, err error) {
 	var conn = c.Pool.Get()
 	defer conn.Close()
-	if err = conn.Send("SET", key, "1", "PX", toMilliSec(timeout), "NX"); err != nil {
+	if err = conn.Send("SET", key, "OK", "PX", toMilliSec(timeout), "NX"); err != nil {
 		return
 	}
 	if err = conn.Send("GET", key); err != nil {
