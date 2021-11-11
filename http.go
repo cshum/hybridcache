@@ -17,6 +17,7 @@ type HTTP struct {
 	RequestKey     func(*http.Request) string
 	AcceptRequest  func(*http.Request) bool
 	AcceptResponse func(*http.Response) bool
+	ErrorHandler   func(http.ResponseWriter, *http.Request, error)
 }
 
 func (h HTTP) Handler(next http.Handler) http.Handler {
@@ -50,7 +51,13 @@ func (h HTTP) Handler(next http.Handler) http.Handler {
 			}
 			return
 		}, h.WaitFor, h.FreshFor, h.TTL); err != nil || p == nil {
-			next.ServeHTTP(w, r)
+			if h.ErrorHandler != nil {
+				h.ErrorHandler(w, r, err)
+			} else if err == context.DeadlineExceeded {
+				w.WriteHeader(http.StatusRequestTimeout)
+			} else {
+				w.WriteHeader(http.StatusBadRequest)
+			}
 			return
 		}
 		for k, v := range p.Header {

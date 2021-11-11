@@ -100,7 +100,8 @@ type chanRes struct {
 }
 
 func callWithTimeout(
-	ctx context.Context, fn func(ctx context.Context) ([]byte, error),
+	ctx context.Context,
+	fn func(ctx context.Context) ([]byte, error),
 	waitFor time.Duration,
 ) ([]byte, error) {
 	var (
