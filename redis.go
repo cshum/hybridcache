@@ -31,12 +31,12 @@ type Redis struct {
 	// but smaller than minimum FreshFor duration
 	SuppressionTTL time.Duration
 
-	// DisableSuppression disable call suppression for Race method,
+	// DisableLock disable redis lock that manages call suppression for Race method,
 	// which result function to be executed immediately.
 	// You may want to disable if you do not have a strong requirement of global call suppression,
-	// which the Memory call suppression (using Redis + Memory Hybrid) would be sufficient.
+	// which the in-memory call suppression (using Redis + Memory Hybrid) would be sufficient.
 	// Then the extra cost of redis lock may not seem to worth it.
-	DisableSuppression bool
+	DisableLock bool
 }
 
 const (
@@ -109,7 +109,7 @@ func (c *Redis) Set(key string, value []byte, ttl time.Duration) error {
 func (c *Redis) Race(
 	key string, fn func() ([]byte, error), timeout time.Duration,
 ) (value []byte, err error) {
-	if c.DisableSuppression {
+	if c.DisableLock {
 		return fn()
 	}
 	var (
