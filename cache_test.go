@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"golang.org/x/sync/errgroup"
 	"strconv"
 	"testing"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/gomodule/redigo/redis"
 )
+
+var errCustomTest = errors.New("custom test error")
 
 func createRedisCache(db int) (c *Redis) {
 	c = NewRedis(&redis.Pool{
@@ -20,6 +23,12 @@ func createRedisCache(db int) (c *Redis) {
 		return time.Microsecond
 	}
 	c.SuppressionTTL = time.Millisecond * 10
+	c.ErrorMapper = func(err error) error {
+		if err.Error() == "custom test error" {
+			return errCustomTest
+		}
+		return nil
+	}
 	return
 }
 

@@ -55,7 +55,6 @@ func DoTestFuncDoBytes(name string, t *testing.T, c Cache) {
 			wantErr      string
 			wantErrExact error
 			noErr        bool
-			repeat       int
 			sleep        time.Duration
 		}{
 			{
@@ -142,27 +141,60 @@ func DoTestFuncDoBytes(name string, t *testing.T, c Cache) {
 				noErr:   true,
 				sleep:   time.Millisecond,
 			},
+			{
+				name: "should timeout",
+				key:  "loooong",
+				c:    fn1,
+				fn: func(ctx context.Context) ([]byte, error) {
+					time.Sleep(time.Second)
+					return []byte("dead"), nil
+				},
+				wantVal:      nil,
+				wantErrExact: context.DeadlineExceeded,
+				sleep:        time.Millisecond,
+			},
+			{
+				name: "panic should result error",
+				key:  "die",
+				c:    fn1,
+				fn: func(ctx context.Context) ([]byte, error) {
+					panic("booommm")
+					return []byte("ok"), nil
+				},
+				wantVal: nil,
+				wantErr: "booommm",
+				sleep:   time.Millisecond,
+			},
+			{
+				name: "should return same custom error",
+				key:  "err",
+				c:    fn1,
+				fn: func(ctx context.Context) ([]byte, error) {
+					return []byte("abc"), errCustomTest
+				},
+				wantVal:      nil,
+				wantErrExact: errCustomTest,
+				sleep:        time.Millisecond,
+			},
 		}
 		for _, tt := range tests {
-			for i := 0; i <= tt.repeat; i++ {
-				t.Run(tt.name, func(t *testing.T) {
-					ctx := context.Background()
-					val, err := tt.c.DoBytes(ctx, tt.key, tt.fn)
-					if tt.noErr && err != nil {
-						t.Error(err)
-					}
-					if !reflect.DeepEqual(val, tt.wantVal) {
-						t.Errorf(" = %v, want %v", string(val), string(tt.wantVal))
-					}
-					if tt.wantErr != "" && (err == nil || err.Error() != tt.wantErr) {
-						t.Errorf(" = %v, want %v", err, tt.wantErr)
-					}
-					if tt.wantErrExact != nil && err != tt.wantErrExact {
-						t.Errorf(" = %v, want %v", err, tt.wantErrExact)
-					}
-					time.Sleep(tt.sleep)
-				})
-			}
+			t.Run(tt.name, func(t *testing.T) {
+				ctx := context.Background()
+				val, err := tt.c.DoBytes(ctx, tt.key, tt.fn)
+				if tt.noErr && err != nil {
+					t.Error(err)
+				}
+				if !reflect.DeepEqual(val, tt.wantVal) {
+					t.Errorf(" = %v, want %v", string(val), string(tt.wantVal))
+				}
+				if tt.wantErr != "" && (err == nil || err.Error() != tt.wantErr) {
+					t.Errorf(" = %v, want %v", err, tt.wantErr)
+				}
+				if tt.wantErrExact != nil && err != tt.wantErrExact {
+					t.Errorf(" = %v, want %v", err, tt.wantErrExact)
+				}
+				time.Sleep(tt.sleep)
+			})
 		}
 	})
 }
@@ -184,7 +216,6 @@ func DoTestFuncDo(name string, t *testing.T, c Cache) {
 			wantErr      string
 			wantErrExact error
 			noErr        bool
-			repeat       int
 			sleep        time.Duration
 		}{
 			{
@@ -305,28 +336,37 @@ func DoTestFuncDo(name string, t *testing.T, c Cache) {
 				wantErr: "booommm",
 				sleep:   time.Millisecond,
 			},
+			{
+				name: "should return same custom error",
+				key:  "err",
+				c:    fn,
+				fn: func(ctx context.Context) (interface{}, error) {
+					return "abc", errCustomTest
+				},
+				wantVal:      "",
+				wantErrExact: errCustomTest,
+				sleep:        time.Millisecond,
+			},
 		}
 		for _, tt := range tests {
-			for i := 0; i <= tt.repeat; i++ {
-				t.Run(tt.name, func(t *testing.T) {
-					ctx := context.Background()
-					var val string
-					err := tt.c.Do(ctx, tt.key, tt.fn, &val)
-					if tt.noErr && err != nil {
-						t.Error(err)
-					}
-					if val != tt.wantVal {
-						t.Errorf(" = %v, want %v", val, tt.wantVal)
-					}
-					if tt.wantErr != "" && (err == nil || err.Error() != tt.wantErr) {
-						t.Errorf(" = %v, want %v", err, tt.wantErr)
-					}
-					if tt.wantErrExact != nil && err != tt.wantErrExact {
-						t.Errorf(" = %v, want %v", err, tt.wantErrExact)
-					}
-					time.Sleep(tt.sleep)
-				})
-			}
+			t.Run(tt.name, func(t *testing.T) {
+				ctx := context.Background()
+				var val string
+				err := tt.c.Do(ctx, tt.key, tt.fn, &val)
+				if tt.noErr && err != nil {
+					t.Error(err)
+				}
+				if val != tt.wantVal {
+					t.Errorf(" = %v, want %v", val, tt.wantVal)
+				}
+				if tt.wantErr != "" && (err == nil || err.Error() != tt.wantErr) {
+					t.Errorf(" = %v, want %v", err, tt.wantErr)
+				}
+				if tt.wantErrExact != nil && err != tt.wantErrExact {
+					t.Errorf(" = %v, want %v", err, tt.wantErrExact)
+				}
+				time.Sleep(tt.sleep)
+			})
 		}
 	})
 }
