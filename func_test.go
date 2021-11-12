@@ -388,7 +388,7 @@ func DoTestFuncDoConcurrent(name string, t *testing.T, c Cache) {
 					g.Go(func() error {
 						var val string
 						if err := fn.Do(ctx, j, func(_ context.Context) (interface{}, error) {
-							time.Sleep(time.Millisecond * 200)
+							time.Sleep(time.Millisecond * 400)
 							called <- 1
 							return "foo" + j, nil
 						}, &val); err != nil || val != "foo"+j {
