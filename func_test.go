@@ -13,27 +13,27 @@ import (
 
 func TestFunc_Do(t *testing.T) {
 	DoTestFuncDo("Memory", t, NewMemory(10, int64(10<<20), -1))
-	DoTestFuncDo("Redis", t, createRedisCache(4))
+	DoTestFuncDo("Redis", t, createRedisCache())
 	DoTestFuncDo("Hybrid", t, NewHybrid(
-		createRedisCache(5),
+		createRedisCache(),
 		NewMemory(10, int64(10<<20), -1),
 	))
 }
 
 func TestFunc_DoBytes(t *testing.T) {
 	DoTestFuncDoBytes("Memory", t, NewMemory(10, int64(10<<20), -1))
-	DoTestFuncDoBytes("Redis", t, createRedisCache(6))
+	DoTestFuncDoBytes("Redis", t, createRedisCache())
 	DoTestFuncDoBytes("Hybrid", t, NewHybrid(
-		createRedisCache(7),
+		createRedisCache(),
 		NewMemory(10, int64(10<<20), -1),
 	))
 }
 
 func TestFunc_Do_Concurrent(t *testing.T) {
 	DoTestFuncDoConcurrent("Memory", t, NewMemory(10, int64(10<<20), -1))
-	DoTestFuncDoConcurrent("Redis", t, createRedisCache(8))
+	DoTestFuncDoConcurrent("Redis", t, createRedisCache())
 	DoTestFuncDoConcurrent("Hybrid", t, NewHybrid(
-		createRedisCache(9),
+		createRedisCache(),
 		NewMemory(10, int64(10<<20), -1),
 	))
 }

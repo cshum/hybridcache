@@ -3,7 +3,9 @@ package cache
 import (
 	"context"
 	"errors"
+	"fmt"
 	"golang.org/x/sync/errgroup"
+	"math/rand"
 	"strconv"
 	"testing"
 	"time"
@@ -13,16 +15,17 @@ import (
 
 var errCustomTest = errors.New("custom test error")
 
-func createRedisCache(db int) (c *Redis) {
+func createRedisCache() (c *Redis) {
 	c = NewRedis(&redis.Pool{
 		Dial: func() (conn redis.Conn, err error) {
-			return redis.Dial("tcp", ":6379", redis.DialDatabase(db))
+			return redis.Dial("tcp", ":6379")
 		},
 	})
 	c.DelayFunc = func(_ int) time.Duration {
 		return time.Microsecond
 	}
 	c.SuppressionTTL = time.Millisecond * 10
+	c.Prefix = fmt.Sprintf("!%d!", rand.Int())
 	c.ErrorMapper = func(err error) error {
 		if err.Error() == "custom test error" {
 			return errCustomTest
@@ -131,13 +134,13 @@ func DoTestRace(t *testing.T, c Cache) {
 
 func TestCache(t *testing.T) {
 	DoTestCache("Memory", t, NewMemory(10, int64(10<<20), -1))
-	DoTestCache("Redis", t, createRedisCache(1))
+	DoTestCache("Redis", t, createRedisCache())
 	DoTestCache("Hybrid", t, NewHybrid(
-		createRedisCache(2),
+		createRedisCache(),
 		NewMemory(10, int64(10<<20), time.Minute*1),
 	))
 	DoTestCache("HybridRedis", t, NewHybrid(
-		createRedisCache(3),
+		createRedisCache(),
 		NewMemory(10, int64(10<<20), time.Nanosecond)),
 	)
 }
