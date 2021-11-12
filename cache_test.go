@@ -24,7 +24,7 @@ func createRedisCache(db int) (c *Redis) {
 
 func DoTestCache(t *testing.T, c Cache) {
 	DoTestCommon(t, c)
-	DoTestOnce(t, c)
+	DoTestRace(t, c)
 }
 
 func DoTestCommon(t *testing.T, c Cache) {
@@ -55,7 +55,7 @@ func DoTestCommon(t *testing.T, c Cache) {
 	}
 }
 
-func DoTestOnce(t *testing.T, c Cache) {
+func DoTestRace(t *testing.T, c Cache) {
 	var (
 		m         = 10
 		n         = 10
@@ -67,7 +67,7 @@ func DoTestOnce(t *testing.T, c Cache) {
 		for j := 0; j < n; j++ {
 			(func(j string) {
 				g.Go(func() error {
-					b, err := c.Once(j, func() ([]byte, error) {
+					b, err := c.Race(j, func() ([]byte, error) {
 						called <- 1
 						time.Sleep(time.Millisecond * 10)
 						if j == "3" {

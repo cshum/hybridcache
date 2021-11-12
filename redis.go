@@ -26,12 +26,12 @@ type Redis struct {
 	// DelayFunc is used to decide the amount of time to wait between lock retries.
 	DelayFunc func(tries int) time.Duration
 
-	// SuppressionTTL ttl of value being kept for Once suppression
+	// SuppressionTTL ttl of value being kept for Race suppression
 	// default to 3 seconds. Should be a value larger than maximum DelayFunc
 	// but smaller than minimum FreshFor duration
 	SuppressionTTL time.Duration
 
-	// SkipLock skips redis lock that manages call suppression for Once method,
+	// SkipLock skips redis lock that manages call suppression for Race method,
 	// which result function to be executed immediately.
 	// You may want to do so if you would like to skip the extra cost of redis lock.
 	SkipLock bool
@@ -42,7 +42,6 @@ const (
 	defaultMaxRetryDelayMilliSec = 250
 	defaultSuppressionTTL        = time.Second * 3
 	defaultLockPrefix            = "!lock!"
-	waitVal                      = "!wait!"
 )
 
 type lockRes struct {
@@ -104,23 +103,21 @@ func (c *Redis) Set(key string, value []byte, ttl time.Duration) error {
 	return nil
 }
 
-func (c *Redis) Once(
+func (c *Redis) Race(
 	key string, fn func() ([]byte, error), timeout time.Duration,
 ) (value []byte, err error) {
 	if c.SkipLock {
 		return fn()
 	}
 	var (
-		resp        []byte
-		locked      bool
 		retries     int
-		e           error
 		ctx, cancel = context.WithTimeout(context.Background(), timeout)
 	)
 	defer cancel()
 	key = c.lockKey(key)
 	for {
-		if resp, locked, e = c.lock(key, timeout); e != nil {
+		resp, locked, e := c.lock(key, timeout)
+		if e != nil {
 			// if redis upstream failed, handle directly
 			// instead of crashing downstream consumers
 			value, err = fn()
@@ -128,13 +125,15 @@ func (c *Redis) Once(
 		}
 		if locked {
 			value, err = fn()
-			if e = c.setSuppression(key, value, err); e != nil {
+			if e := c.setRaceResp(key, value, err); e != nil {
 				err = e
 			}
 			return
-		}
-		if string(resp) != waitVal {
-			value, err = c.parseSuppression(resp)
+		} else if len(resp) > 1 {
+			if ok, v, e := c.parseRaceResp(resp); ok {
+				value = v
+				err = e
+			}
 			return
 		}
 		time.Sleep(c.delayFunc(retries))
@@ -150,7 +149,7 @@ func (c *Redis) lock(
 ) (value []byte, locked bool, err error) {
 	var conn = c.Pool.Get()
 	defer conn.Close()
-	if err = conn.Send("SET", key, waitVal, "PX", toMilliSec(timeout), "NX"); err != nil {
+	if err = conn.Send("SET", key, "1", "PX", toMilliSec(timeout), "NX"); err != nil {
 		return
 	}
 	if err = conn.Send("GET", key); err != nil {
@@ -168,7 +167,7 @@ func (c *Redis) lock(
 	return
 }
 
-func (c *Redis) setSuppression(key string, value []byte, e error) (err error) {
+func (c *Redis) setRaceResp(key string, value []byte, e error) (err error) {
 	var (
 		p   = &lockRes{Res: value, Err: e}
 		b   []byte
@@ -188,11 +187,12 @@ func (c *Redis) setSuppression(key string, value []byte, e error) (err error) {
 	return
 }
 
-func (c *Redis) parseSuppression(resp []byte) (value []byte, err error) {
+func (c *Redis) parseRaceResp(resp []byte) (ok bool, value []byte, err error) {
 	p := &lockRes{}
-	if err = msgpack.Unmarshal(resp, p); err != nil {
+	if e := msgpack.Unmarshal(resp, p); e != nil {
 		return
 	}
+	ok = true
 	value = p.Res
 	err = c.errorMapper(p.Err)
 	return
