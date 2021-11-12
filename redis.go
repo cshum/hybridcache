@@ -26,17 +26,15 @@ type Redis struct {
 	// DelayFunc is used to decide the amount of time to wait between lock retries.
 	DelayFunc func(tries int) time.Duration
 
-	// SuppressionTTL ttl of value being kept for Race suppression
+	// SuppressionTTL ttl of value being kept for Once suppression
 	// default to 3 seconds. Should be a value larger than maximum DelayFunc
 	// but smaller than minimum FreshFor duration
 	SuppressionTTL time.Duration
 
-	// DisableLock disable redis lock that manages call suppression for Race method,
+	// SkipLock skips redis lock that manages call suppression for Once method,
 	// which result function to be executed immediately.
-	// You may want to disable if you do not have a strong requirement of global call suppression,
-	// which the in-memory call suppression (using Redis + Memory Hybrid) would be sufficient.
-	// Then the extra cost of redis lock may not seem to worth it.
-	DisableLock bool
+	// You may want to do so if you would like to skip the extra cost of redis lock.
+	SkipLock bool
 }
 
 const (
@@ -106,10 +104,10 @@ func (c *Redis) Set(key string, value []byte, ttl time.Duration) error {
 	return nil
 }
 
-func (c *Redis) Race(
+func (c *Redis) Once(
 	key string, fn func() ([]byte, error), timeout time.Duration,
 ) (value []byte, err error) {
-	if c.DisableLock {
+	if c.SkipLock {
 		return fn()
 	}
 	var (

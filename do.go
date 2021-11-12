@@ -40,7 +40,7 @@ func doCall(
 	fn func(context.Context) (*payload, error),
 	waitFor, freshFor, ttl time.Duration,
 ) (*payload, error) {
-	return parse(c.Race(key, func() ([]byte, error) {
+	return parse(c.Once(key, func() ([]byte, error) {
 		return callWithTimeout(ctx, func(ctx context.Context) ([]byte, error) {
 			p, err := fn(ctx)
 			if err != nil {

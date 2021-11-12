@@ -46,11 +46,11 @@ func (c *Hybrid) Set(key string, value []byte, ttl time.Duration) error {
 	return c.Upstream.Set(key, value, ttl)
 }
 
-func (c *Hybrid) Race(
+func (c *Hybrid) Once(
 	key string, fn func() ([]byte, error), timeout time.Duration,
 ) ([]byte, error) {
 	start := time.Now()
-	return c.Downstream.Race(key, func() ([]byte, error) {
-		return c.Upstream.Race(key, fn, timeout-time.Since(start))
+	return c.Downstream.Once(key, func() ([]byte, error) {
+		return c.Upstream.Once(key, fn, timeout-time.Since(start))
 	}, timeout)
 }

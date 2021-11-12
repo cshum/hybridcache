@@ -51,7 +51,7 @@ func (c *Memory) Set(key string, value []byte, ttl time.Duration) error {
 	return nil
 }
 
-func (c *Memory) Race(
+func (c *Memory) Once(
 	key string, fn func() ([]byte, error), _ time.Duration,
 ) ([]byte, error) {
 	v, err, _ := c.g.Do(key, func() (interface{}, error) {
