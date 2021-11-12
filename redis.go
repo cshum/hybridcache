@@ -27,7 +27,7 @@ type Redis struct {
 	DelayFunc func(tries int) time.Duration
 
 	// SuppressionTTL ttl of value being kept for Race suppression
-	// default to 3 seconds. Should be a value larger than maximum DelayFunc
+	// default to 2 seconds. Should be a value larger than maximum DelayFunc
 	// but smaller than minimum FreshFor duration
 	SuppressionTTL time.Duration
 
