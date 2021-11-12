@@ -16,9 +16,10 @@ func createRedisCache(db int) (c *Redis) {
 			return redis.Dial("tcp", ":6379", redis.DialDatabase(db))
 		},
 	})
-	c.DelayFunc = func(tries int) time.Duration {
-		return time.Microsecond * time.Duration(tries)
+	c.DelayFunc = func(_ int) time.Duration {
+		return time.Microsecond
 	}
+	c.SuppressionTTL = time.Millisecond * 10
 	return
 }
 

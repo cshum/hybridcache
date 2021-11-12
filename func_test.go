@@ -111,7 +111,7 @@ func TestFuncDoBytes(t *testing.T) {
 			},
 			wantVal: []byte("c1"),
 			noErr:   true,
-			sleep:   time.Millisecond,
+			sleep:   time.Millisecond * 100,
 		},
 		{
 			name: "ErrNoCache handling",
