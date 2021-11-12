@@ -15,7 +15,6 @@ func TestFuncDoBytes(t *testing.T) {
 	var (
 		c    = NewMemory(10, int64(10<<20), -1)
 		fn1  = NewFunc(c, time.Millisecond, time.Millisecond, time.Minute)
-		fn2  = NewFunc(c, time.Millisecond, time.Millisecond*10, time.Minute)
 		fn1j = NewFunc(c, time.Millisecond, time.Millisecond, time.Minute)
 	)
 	fn1j.Marshal = json.Marshal
@@ -52,7 +51,7 @@ func TestFuncDoBytes(t *testing.T) {
 			},
 			wantVal: []byte("b"),
 			noErr:   true,
-			sleep:   time.Millisecond,
+			sleep:   time.Millisecond * 101,
 		},
 		{
 			name: "should use cache",
@@ -65,29 +64,29 @@ func TestFuncDoBytes(t *testing.T) {
 			noErr:   true,
 			sleep:   time.Millisecond,
 		},
-		{
-			name: "should need refresh",
-			key:  "a",
-			c:    fn2,
-			fn: func(ctx context.Context) ([]byte, error) {
-				return []byte("d"), nil
-			},
-			wantVal: []byte("c"),
-			noErr:   true,
-			sleep:   time.Millisecond * 2,
-		},
-		{
-			name: "should not need refresh",
-			key:  "a",
-			c:    fn1,
-			fn: func(ctx context.Context) ([]byte, error) {
-				return []byte("e"), nil
-			},
-			wantVal: []byte("d"),
-			noErr:   true,
-			sleep:   time.Millisecond * 2,
-			repeat:  3,
-		},
+		//{
+		//	name: "should need refresh",
+		//	key:  "a",
+		//	c:    fn2,
+		//	fn: func(ctx context.Context) ([]byte, error) {
+		//		return []byte("d"), nil
+		//	},
+		//	wantVal: []byte("c"),
+		//	noErr:   true,
+		//	sleep:   time.Millisecond * 2,
+		//},
+		//{
+		//	name: "should not need refresh",
+		//	key:  "a",
+		//	c:    fn1,
+		//	fn: func(ctx context.Context) ([]byte, error) {
+		//		return []byte("e"), nil
+		//	},
+		//	wantVal: []byte("d"),
+		//	noErr:   true,
+		//	sleep:   time.Millisecond * 2,
+		//	repeat:  3,
+		//},
 		{
 			name: "should return expected error",
 			key:  "b",
@@ -152,180 +151,195 @@ func TestFuncDoBytes(t *testing.T) {
 	}
 }
 
-func TestFuncDo(t *testing.T) {
-	var (
-		c    = NewMemory(10, int64(10<<20), -1)
-		fn1  = NewFunc(c, time.Millisecond, time.Millisecond, time.Minute)
-		fn2  = NewFunc(c, time.Millisecond, time.Millisecond*10, time.Minute)
-		fn1j = NewFunc(c, time.Millisecond, time.Millisecond, time.Minute)
-	)
-	fn1j.Marshal = json.Marshal
-	fn1j.Unmarshal = json.Unmarshal
-	tests := []struct {
-		name         string
-		key          string
-		c            *Func
-		fn           func(ctx context.Context) (interface{}, error)
-		wantVal      string
-		wantErr      string
-		wantErrExact error
-		noErr        bool
-		repeat       int
-		sleep        time.Duration
-	}{
-		{
-			name: "should be cache miss",
-			key:  "a",
-			c:    fn1,
-			fn: func(ctx context.Context) (interface{}, error) {
-				return "b", nil
+func DoTestFuncDo(name string, t *testing.T, c Cache) {
+	t.Run(name+"FuncDo", func(t *testing.T) {
+		var (
+			//c    = NewMemory(10, int64(10<<20), -1)
+			fn1  = NewFunc(c, time.Millisecond*50, time.Millisecond*50, time.Second*2)
+			fn1j = NewFunc(c, time.Millisecond*50, time.Millisecond*50, time.Second*2)
+		)
+		fn1j.Marshal = json.Marshal
+		fn1j.Unmarshal = json.Unmarshal
+		tests := []struct {
+			name         string
+			key          string
+			c            *Func
+			fn           func(ctx context.Context) (interface{}, error)
+			wantVal      string
+			wantErr      string
+			wantErrExact error
+			noErr        bool
+			repeat       int
+			sleep        time.Duration
+		}{
+			{
+				name: "should be cache miss",
+				key:  "a",
+				c:    fn1,
+				fn: func(ctx context.Context) (interface{}, error) {
+					return "b", nil
+				},
+				wantVal: "b",
+				noErr:   true,
+				sleep:   time.Millisecond,
 			},
-			wantVal: "b",
-			noErr:   true,
-			sleep:   time.Millisecond,
-		},
-		{
-			name: "should absorb error",
-			key:  "a",
-			c:    fn1,
-			fn: func(ctx context.Context) (interface{}, error) {
-				return nil, errors.New("booommmm")
+			{
+				name: "should absorb error",
+				key:  "a",
+				c:    fn1,
+				fn: func(ctx context.Context) (interface{}, error) {
+					return nil, errors.New("booommmm")
+				},
+				wantVal: "b",
+				noErr:   true,
+				sleep:   time.Millisecond,
 			},
-			wantVal: "b",
-			noErr:   true,
-			sleep:   time.Millisecond,
-		},
-		{
-			name: "should use cache",
-			key:  "a",
-			c:    fn1,
-			fn: func(ctx context.Context) (interface{}, error) {
-				return "c", nil
+			{
+				name: "should use cache",
+				key:  "a",
+				c:    fn1,
+				fn: func(ctx context.Context) (interface{}, error) {
+					return "c", nil
+				},
+				wantVal: "b",
+				noErr:   true,
+				sleep:   time.Millisecond * 11,
 			},
-			wantVal: "b",
-			noErr:   true,
-			sleep:   time.Millisecond,
-		},
-		{
-			name: "should need refresh",
-			key:  "a",
-			c:    fn2,
-			fn: func(ctx context.Context) (interface{}, error) {
-				return "d", nil
+			//{
+			//	name: "should need refresh",
+			//	key:  "a",
+			//	c:    fn1,
+			//	fn: func(ctx context.Context) (interface{}, error) {
+			//		return "d", nil
+			//	},
+			//	wantVal: "c",
+			//	noErr:   true,
+			//	sleep:   time.Millisecond * 11,
+			//},
+			//{
+			//	name: "should not need refresh",
+			//	key:  "a",
+			//	c:    fn1,
+			//	fn: func(ctx context.Context) (interface{}, error) {
+			//		return "e", nil
+			//	},
+			//	wantVal: "d",
+			//	noErr:   true,
+			//	repeat:  3,
+			//	sleep:   time.Millisecond * 2,
+			//},
+			{
+				name: "cached value corrupted should be treated as cache miss",
+				key:  "a",
+				c:    fn1j,
+				fn: func(ctx context.Context) (interface{}, error) {
+					return "asdf", nil
+				},
+				wantVal: "asdf",
+				noErr:   true,
+				sleep:   time.Millisecond,
 			},
-			wantVal: "c",
-			noErr:   true,
-			sleep:   time.Millisecond * 2,
-		},
-		{
-			name: "should not need refresh",
-			key:  "a",
-			c:    fn1,
-			fn: func(ctx context.Context) (interface{}, error) {
-				return "e", nil
+			{
+				name: "should return expected error",
+				key:  "b",
+				c:    fn1,
+				fn: func(ctx context.Context) (interface{}, error) {
+					return nil, errors.New("expected error")
+				},
+				noErr:   false,
+				wantErr: "expected error",
+				sleep:   time.Millisecond,
 			},
-			wantVal: "d",
-			noErr:   true,
-			repeat:  3,
-			sleep:   time.Millisecond * 2,
-		},
-		{
-			name: "cached value corrupted should be treated as cache miss",
-			key:  "a",
-			c:    fn1j,
-			fn: func(ctx context.Context) (interface{}, error) {
-				return "asdf", nil
+			{
+				name: "ErrNoCache handling",
+				key:  "c",
+				c:    fn1,
+				fn: func(ctx context.Context) (interface{}, error) {
+					if IsDetached(ctx) {
+						t.Error("ErrNoCache should not detach")
+					}
+					return "c1", ErrNoCache
+				},
+				noErr:   true,
+				wantVal: "c1",
+				sleep:   time.Millisecond,
 			},
-			wantVal: "asdf",
-			noErr:   true,
-			sleep:   time.Millisecond,
-		},
-		{
-			name: "should return expected error",
-			key:  "b",
-			c:    fn1,
-			fn: func(ctx context.Context) (interface{}, error) {
-				return nil, errors.New("expected error")
+			{
+				name: "ErrNoCache handling",
+				key:  "c",
+				c:    fn1,
+				fn: func(ctx context.Context) (interface{}, error) {
+					if IsDetached(ctx) {
+						t.Error("ErrNoCache should not detach")
+					}
+					return "c2", ErrNoCache
+				},
+				noErr:   true,
+				wantVal: "c2",
+				sleep:   time.Millisecond,
 			},
-			noErr:   false,
-			wantErr: "expected error",
-			sleep:   time.Millisecond,
-		},
-		{
-			name: "ErrNoCache handling",
-			key:  "c",
-			c:    fn1,
-			fn: func(ctx context.Context) (interface{}, error) {
-				if IsDetached(ctx) {
-					t.Error("ErrNoCache should not detach")
-				}
-				return "c1", ErrNoCache
+			{
+				name: "should timeout",
+				key:  "loooong",
+				c:    fn1,
+				fn: func(ctx context.Context) (interface{}, error) {
+					time.Sleep(time.Second)
+					return "dead", nil
+				},
+				wantVal:      "",
+				wantErrExact: context.DeadlineExceeded,
+				sleep:        time.Millisecond,
 			},
-			noErr:   true,
-			wantVal: "c1",
-			sleep:   time.Millisecond,
-		},
-		{
-			name: "ErrNoCache handling",
-			key:  "c",
-			c:    fn1,
-			fn: func(ctx context.Context) (interface{}, error) {
-				if IsDetached(ctx) {
-					t.Error("ErrNoCache should not detach")
-				}
-				return "c2", ErrNoCache
+			{
+				name: "panic should result error",
+				key:  "die",
+				c:    fn1,
+				fn: func(ctx context.Context) (interface{}, error) {
+					panic("booommm")
+					return "ok", nil
+				},
+				wantVal: "",
+				wantErr: "booommm",
+				sleep:   time.Millisecond,
 			},
-			noErr:   true,
-			wantVal: "c2",
-			sleep:   time.Millisecond,
-		},
-		{
-			name: "should timeout",
-			key:  "loooong",
-			c:    fn1,
-			fn: func(ctx context.Context) (interface{}, error) {
-				time.Sleep(time.Second)
-				return "dead", nil
-			},
-			wantVal:      "",
-			wantErrExact: context.DeadlineExceeded,
-			sleep:        time.Millisecond,
-		},
-		{
-			name: "panic should result error",
-			key:  "die",
-			c:    fn1,
-			fn: func(ctx context.Context) (interface{}, error) {
-				panic("booommm")
-				return "ok", nil
-			},
-			wantVal: "",
-			wantErr: "booommm",
-			sleep:   time.Millisecond,
-		},
-	}
-	for _, tt := range tests {
-		for i := 0; i <= tt.repeat; i++ {
-			t.Run(tt.name, func(t *testing.T) {
-				ctx := context.Background()
-				var val string
-				err := tt.c.Do(ctx, tt.key, tt.fn, &val)
-				if tt.noErr && err != nil {
-					t.Error(err)
-				}
-				if val != tt.wantVal {
-					t.Errorf(" = %v, want %v", val, tt.wantVal)
-				}
-				if tt.wantErr != "" && (err == nil || err.Error() != tt.wantErr) {
-					t.Errorf(" = %v, want %v", err, tt.wantErr)
-				}
-				if tt.wantErrExact != nil && err != tt.wantErrExact {
-					t.Errorf(" = %v, want %v", err, tt.wantErrExact)
-				}
-				time.Sleep(tt.sleep)
-			})
 		}
-	}
+		for _, tt := range tests {
+			for i := 0; i <= tt.repeat; i++ {
+				t.Run(tt.name, func(t *testing.T) {
+					ctx := context.Background()
+					var val string
+					err := tt.c.Do(ctx, tt.key, tt.fn, &val)
+					if tt.noErr && err != nil {
+						t.Error(err)
+					}
+					if val != tt.wantVal {
+						t.Errorf(" = %v, want %v", val, tt.wantVal)
+					}
+					if tt.wantErr != "" && (err == nil || err.Error() != tt.wantErr) {
+						t.Errorf(" = %v, want %v", err, tt.wantErr)
+					}
+					if tt.wantErrExact != nil && err != tt.wantErrExact {
+						t.Errorf(" = %v, want %v", err, tt.wantErrExact)
+					}
+					time.Sleep(tt.sleep)
+				})
+			}
+		}
+
+	})
+}
+
+func TestFunc_Do(t *testing.T) {
+	DoTestFuncDo("Memory", t, NewMemory(10, int64(10<<20), -1))
+	DoTestFuncDo("Redis", t, createRedisCache(4))
+	DoTestFuncDo("Hybrid", t, NewHybrid(
+		createRedisCache(5),
+		NewMemory(10, int64(10<<20), -1),
+	))
+	DoTestFuncDo("HybridRedis", t, NewHybrid(
+		createRedisCache(6),
+		NewMemory(10, int64(10<<20), time.Nanosecond)),
+	)
 }
 
 func TestFunc_Do_Concurrent(t *testing.T) {
