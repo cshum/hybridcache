@@ -62,31 +62,19 @@ func TestFuncDoBytes(t *testing.T) {
 			},
 			wantVal: []byte("b"),
 			noErr:   true,
-			sleep:   time.Millisecond,
+			sleep:   time.Millisecond * 101,
 		},
-		//{
-		//	name: "should need refresh",
-		//	key:  "a",
-		//	c:    fn2,
-		//	fn: func(ctx context.Context) ([]byte, error) {
-		//		return []byte("d"), nil
-		//	},
-		//	wantVal: []byte("c"),
-		//	noErr:   true,
-		//	sleep:   time.Millisecond * 2,
-		//},
-		//{
-		//	name: "should not need refresh",
-		//	key:  "a",
-		//	c:    fn1,
-		//	fn: func(ctx context.Context) ([]byte, error) {
-		//		return []byte("e"), nil
-		//	},
-		//	wantVal: []byte("d"),
-		//	noErr:   true,
-		//	sleep:   time.Millisecond * 2,
-		//	repeat:  3,
-		//},
+		{
+			name: "should need refresh",
+			key:  "a",
+			c:    fn1,
+			fn: func(ctx context.Context) ([]byte, error) {
+				return []byte("d"), nil
+			},
+			wantVal: []byte("c"),
+			noErr:   true,
+			sleep:   time.Millisecond * 2,
+		},
 		{
 			name: "should return expected error",
 			key:  "b",
@@ -192,7 +180,7 @@ func DoTestFuncDo(name string, t *testing.T, c Cache) {
 				},
 				wantVal: "b",
 				noErr:   true,
-				sleep:   time.Millisecond,
+				sleep:   time.Millisecond * 101,
 			},
 			{
 				name: "should use cache",
@@ -203,31 +191,19 @@ func DoTestFuncDo(name string, t *testing.T, c Cache) {
 				},
 				wantVal: "b",
 				noErr:   true,
-				sleep:   time.Millisecond * 11,
+				sleep:   time.Millisecond * 101,
 			},
-			//{
-			//	name: "should need refresh",
-			//	key:  "a",
-			//	c:    fn1,
-			//	fn: func(ctx context.Context) (interface{}, error) {
-			//		return "d", nil
-			//	},
-			//	wantVal: "c",
-			//	noErr:   true,
-			//	sleep:   time.Millisecond * 11,
-			//},
-			//{
-			//	name: "should not need refresh",
-			//	key:  "a",
-			//	c:    fn1,
-			//	fn: func(ctx context.Context) (interface{}, error) {
-			//		return "e", nil
-			//	},
-			//	wantVal: "d",
-			//	noErr:   true,
-			//	repeat:  3,
-			//	sleep:   time.Millisecond * 2,
-			//},
+			{
+				name: "should need refresh",
+				key:  "a",
+				c:    fn1,
+				fn: func(ctx context.Context) (interface{}, error) {
+					return "d", nil
+				},
+				wantVal: "c",
+				noErr:   true,
+				sleep:   time.Millisecond * 101,
+			},
 			{
 				name: "cached value corrupted should be treated as cache miss",
 				key:  "a",
