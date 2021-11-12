@@ -262,7 +262,7 @@ func DoTestFuncDo(name string, t *testing.T, c Cache) {
 				},
 				noErr:   true,
 				wantVal: "c1",
-				sleep:   time.Millisecond,
+				sleep:   time.Millisecond * 100,
 			},
 			{
 				name: "ErrNoCache handling",
