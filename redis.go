@@ -33,7 +33,8 @@ type Redis struct {
 
 	// SkipLock skips redis lock that manages call suppression for Race method,
 	// which result function to be executed immediately.
-	// You may want to do so if you would like to skip the extra cost of redis lock.
+	// This will skip the extra cost of redis lock, if you do not need suppression
+	// across multiple servers
 	SkipLock bool
 }
 

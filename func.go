@@ -39,21 +39,18 @@ func (f Func) Do(
 	fn func(context.Context) (interface{}, error),
 	v interface{},
 ) (err error) {
-	var p *payload
-	var pfn = func(ctx context.Context) (p *payload, err error) {
-		var (
-			v interface{}
-			b []byte
-		)
-		if v, err = fn(ctx); err != nil && err != ErrNoCache {
-			return
+	var pfn = func(ctx context.Context) (*payload, error) {
+		v, err := fn(ctx)
+		if err != nil && err != ErrNoCache {
+			return nil, err
 		}
-		if b, err = f.marshal(v); err != nil {
-			return
+		b, err2 := f.marshal(v)
+		if err2 != nil {
+			return nil, err2
 		}
-		p = newPayload(b)
-		return
+		return newPayload(b), err
 	}
+	var p *payload
 	if p, err = do(ctx, f.Cache, key, pfn, f.WaitFor, f.FreshFor, f.TTL); err != nil {
 		return
 	}

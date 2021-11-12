@@ -27,19 +27,19 @@ func TestFuncDoBytes(t *testing.T) {
 	}); err != nil || string(val) != "b" {
 		t.Error(val, err, "should be cache miss")
 	}
-	time.Sleep(time.Millisecond * 2)
+	time.Sleep(time.Millisecond)
 	if val, err = fn1.DoBytes(ctx, "a", func(_ context.Context) ([]byte, error) {
 		return nil, errors.New("booommmm")
 	}); err != nil || string(val) != "b" {
 		t.Error(val, err, "should absorb error")
 	}
-	time.Sleep(time.Millisecond * 2)
+	time.Sleep(time.Millisecond)
 	if val, err = fn1.DoBytes(ctx, "a", func(_ context.Context) ([]byte, error) {
 		return []byte("c"), nil
 	}); err != nil || string(val) != "b" {
 		t.Error(val, err, "should use cache")
 	}
-	time.Sleep(time.Millisecond * 2)
+	time.Sleep(time.Millisecond)
 	if val, err = fn2.DoBytes(ctx, "a", func(_ context.Context) ([]byte, error) {
 		return []byte("d"), nil
 	}); err != nil || string(val) != "c" {
@@ -59,6 +59,7 @@ func TestFuncDoBytes(t *testing.T) {
 	}); err == nil || err.Error() != "expected error" {
 		t.Error(val, err, "should return expected error")
 	}
+	time.Sleep(time.Millisecond)
 	if val, err = fn1.DoBytes(ctx, "c", func(_ context.Context) ([]byte, error) {
 		if IsDetached(ctx) {
 			t.Error("ErrNoCache should not detech")
@@ -67,6 +68,7 @@ func TestFuncDoBytes(t *testing.T) {
 	}); err != nil || string(val) != "c1" {
 		t.Error(val, err, "ErrNoCache handling")
 	}
+	time.Sleep(time.Millisecond)
 	if val, err = fn1.DoBytes(ctx, "c", func(_ context.Context) ([]byte, error) {
 		if IsDetached(ctx) {
 			t.Error("ErrNoCache should not detech")
@@ -94,24 +96,28 @@ func TestFuncDo(t *testing.T) {
 	}, &val); err != nil || val != "b" {
 		t.Error(val, err, "should be cache miss")
 	}
-	time.Sleep(time.Millisecond * 2)
+	val = ""
+	time.Sleep(time.Millisecond)
 	if err = fn1.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
 		return nil, errors.New("booommmm")
 	}, &val); err != nil || val != "b" {
 		t.Error(val, err, "should absorb error")
 	}
-	time.Sleep(time.Millisecond * 2)
+	val = ""
+	time.Sleep(time.Millisecond)
 	if err = fn1.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
 		return "c", nil
 	}, &val); err != nil || val != "b" {
 		t.Error(val, err, "should use cache")
 	}
-	time.Sleep(time.Millisecond * 2)
+	val = ""
+	time.Sleep(time.Millisecond)
 	if err = fn2.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
 		return "d", nil
 	}, &val); err != nil || val != "c" {
 		t.Error(val, err, "should need refresh")
 	}
+	val = ""
 	time.Sleep(time.Millisecond * 2)
 	for i := 0; i < 3; i++ {
 		if err = fn1.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
@@ -121,6 +127,8 @@ func TestFuncDo(t *testing.T) {
 		}
 		time.Sleep(time.Millisecond * 2)
 	}
+	val = ""
+	time.Sleep(time.Millisecond)
 	if err = fn1j.Do(ctx, "a", func(_ context.Context) (interface{}, error) {
 		return "asdf", nil
 	}, &val); err != nil || val != "asdf" {
@@ -131,6 +139,8 @@ func TestFuncDo(t *testing.T) {
 	}, &val); err == nil || err.Error() != "expected error" {
 		t.Error(val, err, "should return expected error")
 	}
+	val = ""
+	time.Sleep(time.Millisecond)
 	if err = fn1.Do(ctx, "c", func(_ context.Context) (interface{}, error) {
 		if IsDetached(ctx) {
 			t.Error("ErrNoCache should not detech")
@@ -139,6 +149,8 @@ func TestFuncDo(t *testing.T) {
 	}, &val); err != nil || val != "c1" {
 		t.Error(val, err, "ErrNoCache handling")
 	}
+	val = ""
+	time.Sleep(time.Millisecond)
 	if err = fn1.Do(ctx, "c", func(_ context.Context) (interface{}, error) {
 		if IsDetached(ctx) {
 			t.Error("ErrNoCache should not detech")
@@ -147,18 +159,23 @@ func TestFuncDo(t *testing.T) {
 	}, &val); err != nil || val != "c2" {
 		t.Error(val, err, "ErrNoCache handling")
 	}
+	val = ""
+	time.Sleep(time.Millisecond)
 	if err = fn2.Do(ctx, "loooong", func(ctx context.Context) (interface{}, error) {
 		time.Sleep(time.Millisecond * 10)
 		return "dead", nil
 	}, &val); err != context.DeadlineExceeded || val == "dead" {
 		t.Error(val, err, "should timeout")
 	}
+	val = ""
 	time.Sleep(time.Millisecond * 10)
 	if err = fn2.Do(ctx, "loooong", func(ctx context.Context) (interface{}, error) {
 		return "ok", nil
 	}, &val); err != nil || val != "ok" {
 		t.Error(val, err, "last timeout should not set")
 	}
+	val = ""
+	time.Sleep(time.Millisecond)
 	if err = fn2.Do(ctx, "die", func(ctx context.Context) (interface{}, error) {
 		panic("booommm")
 		return "ok", nil
