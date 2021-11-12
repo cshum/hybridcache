@@ -15,8 +15,8 @@ type Cache interface {
 	// Set value and ttl by key
 	Set(key string, value []byte, ttl time.Duration) error
 
-	// Race executes and returns the results of the given function,
-	// suppressing multiple calls for a given key under the specified timeout.
+	// Race executes and returns the results and error of the given function once
+	// under specified timeout, suppressing multiple calls of the same key.
 	// If a duplicate comes in, the duplicate caller waits for the
 	// original to complete and receives the same results.
 	Race(key string, fn func() ([]byte, error), timeout time.Duration) ([]byte, error)
