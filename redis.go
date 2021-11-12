@@ -41,7 +41,7 @@ type Redis struct {
 const (
 	defaultMinRetryDelayMilliSec = 50
 	defaultMaxRetryDelayMilliSec = 250
-	defaultSuppressionTTL        = time.Second * 3
+	defaultSuppressionTTL        = time.Second * 2
 	defaultLockPrefix            = "!lock!"
 )
 
