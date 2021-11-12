@@ -52,7 +52,3 @@ A simple function wrapper or HTTP middleware gives you a lot under the hood:
 * lazy background refresh with liveness
 * cache stampede prevention / call suppression
 * marshalling
-
-## License
-
-MIT
