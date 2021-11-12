@@ -133,8 +133,8 @@ func (c *Redis) Race(
 			if ok, v, e := c.parseRaceResp(resp); ok {
 				value = v
 				err = e
+				return
 			}
-			return
 		}
 		time.Sleep(c.delayFunc(retries))
 		retries++
