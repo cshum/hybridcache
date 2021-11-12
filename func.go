@@ -44,9 +44,9 @@ func (f Func) Do(
 		if err != nil && err != ErrNoCache {
 			return nil, err
 		}
-		b, err2 := f.marshal(v)
-		if err2 != nil {
-			return nil, err2
+		b, e := f.marshal(v)
+		if e != nil {
+			return nil, e
 		}
 		return newPayload(b), err
 	}
