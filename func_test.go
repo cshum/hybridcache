@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"golang.org/x/sync/errgroup"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -12,70 +13,142 @@ import (
 
 func TestFuncDoBytes(t *testing.T) {
 	var (
-		err  error
 		c    = NewMemory(10, int64(10<<20), -1)
 		fn1  = NewFunc(c, time.Millisecond, time.Millisecond, time.Minute)
 		fn2  = NewFunc(c, time.Millisecond, time.Millisecond*10, time.Minute)
 		fn1j = NewFunc(c, time.Millisecond, time.Millisecond, time.Minute)
-		ctx  = context.Background()
 	)
 	fn1j.Marshal = json.Marshal
 	fn1j.Unmarshal = json.Unmarshal
-	var val []byte
-	if val, err = fn1.DoBytes(ctx, "a", func(_ context.Context) ([]byte, error) {
-		return []byte("b"), nil
-	}); err != nil || string(val) != "b" {
-		t.Error(val, err, "should be cache miss")
+	tests := []struct {
+		name         string
+		key          string
+		c            *Func
+		fn           func(ctx context.Context) ([]byte, error)
+		wantVal      []byte
+		wantErr      string
+		wantErrExact error
+		noErr        bool
+		repeat       int
+		sleep        time.Duration
+	}{
+		{
+			name: "should be cache miss",
+			key:  "a",
+			c:    fn1,
+			fn: func(ctx context.Context) ([]byte, error) {
+				return []byte("b"), nil
+			},
+			wantVal: []byte("b"),
+			noErr:   true,
+			sleep:   time.Millisecond,
+		},
+		{
+			name: "should absorb error",
+			key:  "a",
+			c:    fn1,
+			fn: func(ctx context.Context) ([]byte, error) {
+				return nil, errors.New("booommmm")
+			},
+			wantVal: []byte("b"),
+			noErr:   true,
+			sleep:   time.Millisecond,
+		},
+		{
+			name: "should use cache",
+			key:  "a",
+			c:    fn1,
+			fn: func(ctx context.Context) ([]byte, error) {
+				return []byte("c"), nil
+			},
+			wantVal: []byte("b"),
+			noErr:   true,
+			sleep:   time.Millisecond,
+		},
+		{
+			name: "should need refresh",
+			key:  "a",
+			c:    fn2,
+			fn: func(ctx context.Context) ([]byte, error) {
+				return []byte("d"), nil
+			},
+			wantVal: []byte("c"),
+			noErr:   true,
+			sleep:   time.Millisecond * 2,
+		},
+		{
+			name: "should not need refresh",
+			key:  "a",
+			c:    fn1,
+			fn: func(ctx context.Context) ([]byte, error) {
+				return []byte("e"), nil
+			},
+			wantVal: []byte("d"),
+			noErr:   true,
+			sleep:   time.Millisecond * 2,
+			repeat:  3,
+		},
+		{
+			name: "should return expected error",
+			key:  "b",
+			c:    fn1,
+			fn: func(ctx context.Context) ([]byte, error) {
+				return nil, errors.New("expected error")
+			},
+			wantVal: nil,
+			noErr:   false,
+			wantErr: "expected error",
+			sleep:   time.Millisecond,
+		},
+		{
+			name: "ErrNoCache handling",
+			key:  "c",
+			c:    fn1,
+			fn: func(ctx context.Context) ([]byte, error) {
+				if IsDetached(ctx) {
+					t.Error("ErrNoCache should not detach")
+				}
+				return []byte("c1"), ErrNoCache
+			},
+			wantVal: []byte("c1"),
+			noErr:   true,
+			sleep:   time.Millisecond,
+		},
+		{
+			name: "ErrNoCache handling",
+			key:  "c",
+			c:    fn1,
+			fn: func(ctx context.Context) ([]byte, error) {
+				if IsDetached(ctx) {
+					t.Error("ErrNoCache should not detach")
+				}
+				return []byte("c2"), ErrNoCache
+			},
+			wantVal: []byte("c2"),
+			noErr:   true,
+			sleep:   time.Millisecond,
+		},
 	}
-	time.Sleep(time.Millisecond)
-	if val, err = fn1.DoBytes(ctx, "a", func(_ context.Context) ([]byte, error) {
-		return nil, errors.New("booommmm")
-	}); err != nil || string(val) != "b" {
-		t.Error(val, err, "should absorb error")
-	}
-	time.Sleep(time.Millisecond)
-	if val, err = fn1.DoBytes(ctx, "a", func(_ context.Context) ([]byte, error) {
-		return []byte("c"), nil
-	}); err != nil || string(val) != "b" {
-		t.Error(val, err, "should use cache")
-	}
-	time.Sleep(time.Millisecond)
-	if val, err = fn2.DoBytes(ctx, "a", func(_ context.Context) ([]byte, error) {
-		return []byte("d"), nil
-	}); err != nil || string(val) != "c" {
-		t.Error(val, err, "should need refresh")
-	}
-	time.Sleep(time.Millisecond * 2)
-	for i := 0; i < 3; i++ {
-		if val, err = fn1.DoBytes(ctx, "a", func(_ context.Context) ([]byte, error) {
-			return []byte("e"), nil
-		}); err != nil || string(val) != "d" {
-			t.Error(val, err, "should not need refresh")
+	for _, tt := range tests {
+		for i := 0; i <= tt.repeat; i++ {
+			t.Run(tt.name, func(t *testing.T) {
+				ctx := context.Background()
+				val, err := tt.c.DoBytes(ctx, tt.key, tt.fn)
+				if tt.noErr && err != nil {
+					t.Error(err)
+				}
+				if !reflect.DeepEqual(val, tt.wantVal) {
+					t.Errorf(" = %v, want %v", string(val), string(tt.wantVal))
+				}
+				if tt.wantErr != "" && (err == nil || err.Error() != tt.wantErr) {
+					t.Errorf(" = %v, want %v", err, tt.wantErr)
+				}
+				if tt.wantErrExact != nil && err != tt.wantErrExact {
+					t.Errorf(" = %v, want %v", err, tt.wantErrExact)
+				}
+				time.Sleep(tt.sleep)
+			})
 		}
-		time.Sleep(time.Millisecond * 2)
-	}
-	if val, err = fn1.DoBytes(ctx, "b", func(_ context.Context) ([]byte, error) {
-		return nil, errors.New("expected error")
-	}); err == nil || err.Error() != "expected error" {
-		t.Error(val, err, "should return expected error")
-	}
-	time.Sleep(time.Millisecond)
-	if val, err = fn1.DoBytes(ctx, "c", func(_ context.Context) ([]byte, error) {
-		if IsDetached(ctx) {
-			t.Error("ErrNoCache should not detech")
-		}
-		return []byte("c1"), ErrNoCache
-	}); err != nil || string(val) != "c1" {
-		t.Error(val, err, "ErrNoCache handling")
-	}
-	time.Sleep(time.Millisecond)
-	if val, err = fn1.DoBytes(ctx, "c", func(_ context.Context) ([]byte, error) {
-		if IsDetached(ctx) {
-			t.Error("ErrNoCache should not detech")
-		}
-		return []byte("c2"), ErrNoCache
-	}); err != nil || string(val) != "c2" {
-		t.Error(val, err, "ErrNoCache handling")
 	}
 }
 
