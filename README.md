@@ -16,9 +16,8 @@ memoryCache := cache.NewMemory(1e5, 1<<29, time.Hour)
 hybridCache := cache.NewHybrid(redisCache, memoryCache)
 ```
 
-Redis upstream provides cache coordination and call suppression across multiple servers, while Memory downstream enables the fastest response time for frequent cache hit. 
+The hybrid combination allows Redis upstream coordinate across multiple servers, while Memory downstream ensures minimal network I/O which brings the fastest response time. 
 Shall the Redis upstream failed, memory downstream will still operate independently without service disruption.
-
 ```go
 // wrap function call with hybrid cache
 cacheFunc := cache.NewFunc(hybridCache, time.Seconds*20, time.Minute, time.Hour)
@@ -62,7 +61,7 @@ if err := cacheFunc.Do(ctx, someKey, func(ctx context.Context) (interface{}, err
 	start := time.Now()
 	items, err := someHeavyOperations(ctx, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if time.Since(start) < time.Millisecond*300 {
 		// no cache if response within 300 milliseconds
