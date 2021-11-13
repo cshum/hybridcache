@@ -52,7 +52,7 @@ A simple function wrapper or HTTP middleware gives you under the hood:
 * Marshal and unmarshal options for function calls - default to msgpack, with options to configure your own.
 
 
-Adaptive caching with `cache.ErrNoCache`:
+Conditional caching with `cache.ErrNoCache`:
 
 ```go
 var items []*Items
