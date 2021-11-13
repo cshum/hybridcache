@@ -26,7 +26,7 @@ cacheFunc := cache.NewFunc(hybridCache, time.Seconds*20, time.Minute, time.Hour)
 var items []*Items
 someKey := fmt.Sprintf("key-%d", id)
 if err := cacheFunc.Do(ctx, someKey, func(ctx context.Context) (interface{}, error) {
-	return someDBOperations(ctx, id)
+	return someHeavyOperations(ctx, id)
 }, &items); err != nil {
 	return err
 }
@@ -46,9 +46,64 @@ r.Use(cacheHandler)
 r.Mount("/", myWebServices)
 http.ListenAndServe(":3001", r)
 ```
-
 A simple function wrapper or HTTP middleware gives you under the hood:
 
 * Lazy background refresh with timeout - after fresh-for timeout exceeded, the next cache hit will trigger a refresh in goroutine, where context deadline is detached from parent and based on wait-for timeout. 
 * Cache stampede prevention - uses singleflight for memory call suppression and `SEX NX` for redis.
 * Marshal and unmarshal options for function calls - default to msgpack, with options to configure your own.
+
+
+Adaptive caching with `cache.ErrNoCache`:
+
+```go
+var items []*Items
+someKey := fmt.Sprintf("key-%d", id)
+if err := cacheFunc.Do(ctx, someKey, func(ctx context.Context) (interface{}, error) {
+	start := time.Now()
+	items, err := someHeavyOperations(ctx, id)
+	if err != nil {
+		return err
+	}
+	if time.Since(start) < time.Millisecond*300 {
+		// no cache if response within 300 milliseconds
+		return items, cache.ErrNoCache
+	}
+	return items, nil
+}, &items); err != nil {
+	// ErrNoCache will NOT appear outside
+	return err
+}
+```
+More options:
+```go
+cacheFunc := cache.NewFunc(hybridCache, time.Seconds*20, time.Minute, time.Hour)
+cacheFunc.Marshal = json.Marshal
+cacheFunc.Unmarshal = json.Unmarshal
+// custom Marshal Unmarshal function, default msgpack
+
+
+h := cache.NewHTTP(hybridCache, time.Seconds*30, time.Minute, time.Hour*12)
+h.RequestKey = func(r *http.Request) string {
+	// cache key by url excluding query params
+	return strings.Split(r.URL.String(), "?")[0]
+}
+h.AcceptRequest = func(r *http.Request) bool {
+	if strings.Contains(r.URL.RawQuery, "nocache") {
+		// no cache if nocache appears in query
+		return false
+	}
+	return true
+}
+h.AcceptResponse = func(res *http.Response) bool {
+	if res.StatusCode != http.StatusOK {
+		// no cache if status code not 200
+		return false
+	}
+	if res.ContentLength >= 1<<20 {
+		// no cache if over 1 MB
+		return false
+	}
+	return true
+}
+cacheHandler := h.Handler
+```
