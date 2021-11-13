@@ -9,6 +9,7 @@ import (
 )
 
 type HTTP struct {
+	// Cache adapter
 	Cache Cache
 
 	// WaitFor wait timeout for the func call to complete

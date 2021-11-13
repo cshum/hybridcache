@@ -35,6 +35,33 @@ func createRedisCache() (c *Redis) {
 	return
 }
 
+func TestCache_Common(t *testing.T) {
+	DoTestCacheCommon("Memory", t, NewMemory(10, int64(10<<20), -1))
+	DoTestCacheCommon("Redis", t, createRedisCache())
+	DoTestCacheCommon("Hybrid", t, NewHybrid(
+		createRedisCache(),
+		NewMemory(10, int64(10<<20), time.Minute*1),
+	))
+	DoTestCacheCommon("HybridRedis", t, NewHybrid(
+		createRedisCache(),
+		NewMemory(10, int64(10<<20), time.Nanosecond)),
+	)
+}
+
+func TestCache_Race(t *testing.T) {
+	DoTestCacheRace("Memory", t, NewMemory(10, int64(10<<20), -1))
+	//DoTestCacheRace("Redis", t, createRedisCache()) // todo fix redis test
+	DoTestCacheRace("Hybrid", t, NewHybrid(
+		createRedisCache(),
+		NewMemory(10, int64(10<<20), time.Minute*1),
+	))
+	// todo fix redis test
+	//DoTestCacheRace("HybridRedis", t, NewHybrid(
+	//	createRedisCache(),
+	//	NewMemory(10, int64(10<<20), time.Nanosecond)),
+	//)
+}
+
 func DoTestCacheCommon(name string, t *testing.T, c Cache) {
 	t.Run(name+"TestCommon", func(t *testing.T) {
 		// not found
@@ -123,31 +150,4 @@ func DoTestCacheRace(name string, t *testing.T, c Cache) {
 			t.Error(len(responded), "should complete response")
 		}
 	})
-}
-
-func TestCache_Common(t *testing.T) {
-	DoTestCacheCommon("Memory", t, NewMemory(10, int64(10<<20), -1))
-	DoTestCacheCommon("Redis", t, createRedisCache())
-	DoTestCacheCommon("Hybrid", t, NewHybrid(
-		createRedisCache(),
-		NewMemory(10, int64(10<<20), time.Minute*1),
-	))
-	DoTestCacheCommon("HybridRedis", t, NewHybrid(
-		createRedisCache(),
-		NewMemory(10, int64(10<<20), time.Nanosecond)),
-	)
-}
-
-func TestCache_Race(t *testing.T) {
-	DoTestCacheRace("Memory", t, NewMemory(10, int64(10<<20), -1))
-	//DoTestCacheRace("Redis", t, createRedisCache()) // todo fix redis test
-	DoTestCacheRace("Hybrid", t, NewHybrid(
-		createRedisCache(),
-		NewMemory(10, int64(10<<20), time.Minute*1),
-	))
-	// todo fix redis test
-	//DoTestCacheRace("HybridRedis", t, NewHybrid(
-	//	createRedisCache(),
-	//	NewMemory(10, int64(10<<20), time.Nanosecond)),
-	//)
 }

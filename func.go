@@ -7,6 +7,7 @@ import (
 )
 
 type Func struct {
+	// Cache adapter
 	Cache Cache
 
 	// WaitFor wait timeout for the func call to complete
@@ -34,6 +35,7 @@ func NewFunc(c Cache, waitFor, freshFor, ttl time.Duration) *Func {
 	}
 }
 
+// Do wraps and return the results of the given function value pointed to by v.
 func (f Func) Do(
 	ctx context.Context, key string,
 	fn func(context.Context) (interface{}, error),
@@ -66,6 +68,7 @@ func (f Func) Do(
 	return
 }
 
+// DoBytes wraps and returns the bytes result of the given function
 func (f Func) DoBytes(
 	ctx context.Context, key string,
 	fn func(context.Context) ([]byte, error),
