@@ -10,11 +10,12 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
+// Redis cache adaptor based on redigo
 type Redis struct {
-	// Redigo redis Pool
+	// Pool redigo redis pool
 	Pool *redis.Pool
 
-	// Key Prefix
+	// Prefix of key
 	Prefix string
 
 	// LockPrefix prefix of lock key, default "!lock!"
@@ -53,6 +54,7 @@ type lockRes struct {
 
 var errMapper = getErrorMapper()
 
+// NewRedis creates redis cache from redigo redis pool
 func NewRedis(pool *redis.Pool) *Redis {
 	return &Redis{
 		Pool: pool,

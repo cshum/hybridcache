@@ -12,7 +12,7 @@ type HTTP struct {
 	// Cache adapter
 	Cache Cache
 
-	// WaitFor wait timeout for the func call to complete
+	// WaitFor request timeout
 	WaitFor time.Duration
 
 	// FreshFor best-before duration of cache before the next refresh
@@ -38,16 +38,25 @@ type HTTP struct {
 	ErrorHandler func(http.ResponseWriter, *http.Request, error)
 }
 
+// NewHTTP creates cache HTTP middleware client with options:
+// waitFor request timeout, freshFor timeout for next refresh,
+// ttl cache timeout
 func NewHTTP(c Cache, waitFor, freshFor, ttl time.Duration) *HTTP {
 	return &HTTP{
 		Cache:    c,
 		WaitFor:  waitFor,
 		FreshFor: freshFor,
 		TTL:      ttl,
+		RequestKey: func(r *http.Request) string {
+			// default using url as key
+			return r.URL.String()
+		},
 		AcceptRequest: func(r *http.Request) bool {
+			// default only GET requests will be handled
 			return r.Method == http.MethodGet
 		},
 		AcceptResponse: func(res *http.Response) bool {
+			// default status code < 400 will be cached
 			return res.StatusCode < 400
 		},
 	}

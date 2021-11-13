@@ -7,12 +7,20 @@ import (
 	"github.com/dgraph-io/ristretto"
 )
 
+// Memory cache adaptor based on ristretto
 type Memory struct {
-	g      singleflight.Group
-	Cache  *ristretto.Cache
+	g singleflight.Group
+
+	// Cache ristretto in-memory cache
+	Cache *ristretto.Cache
+
+	// MaxTTL bounded maximum ttl
 	MaxTTL time.Duration
 }
 
+// NewMemory creates an in-memory cache with an upper bound for
+// maxItems total number of items, maxSize total byte size
+// maxTTL max ttl of each item
 func NewMemory(maxItems, maxSize int64, maxTTL time.Duration) *Memory {
 	c, err := ristretto.NewCache(&ristretto.Config{
 		NumCounters: maxItems * 10,

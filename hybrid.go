@@ -4,11 +4,13 @@ import (
 	"time"
 )
 
+// Hybrid cache adaptor based on Upstream and Downstream cache adaptors
 type Hybrid struct {
 	Upstream   Cache
 	Downstream Cache
 }
 
+// NewHybrid creates Hybrid cache from upstream and downstream
 func NewHybrid(upstream, downstream Cache) *Hybrid {
 	return &Hybrid{
 		Upstream:   upstream,

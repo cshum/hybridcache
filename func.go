@@ -10,7 +10,7 @@ type Func struct {
 	// Cache adapter
 	Cache Cache
 
-	// WaitFor wait timeout for the func call to complete
+	// WaitFor execution timeout for the function call
 	WaitFor time.Duration
 
 	// FreshFor best-before duration of cache before the next refresh
@@ -26,6 +26,9 @@ type Func struct {
 	Unmarshal func([]byte, interface{}) error
 }
 
+// NewFunc creates cache function client with options:
+// waitFor execution timeout, freshFor timeout for next refresh,
+// ttl cache timeout
 func NewFunc(c Cache, waitFor, freshFor, ttl time.Duration) *Func {
 	return &Func{
 		Cache:    c,
@@ -35,7 +38,9 @@ func NewFunc(c Cache, waitFor, freshFor, ttl time.Duration) *Func {
 	}
 }
 
-// Do wraps and return the results of the given function value pointed to by v.
+// Do wraps and returns the result of the given function value pointed to by v.
+// fn to return error ErrNoCache tells client not to cache the result
+// but will not result an error
 func (f Func) Do(
 	ctx context.Context, key string,
 	fn func(context.Context) (interface{}, error),
@@ -69,6 +74,8 @@ func (f Func) Do(
 }
 
 // DoBytes wraps and returns the bytes result of the given function
+// fn to return error ErrNoCache tells client not to cache the result
+// but will not result an error
 func (f Func) DoBytes(
 	ctx context.Context, key string,
 	fn func(context.Context) ([]byte, error),

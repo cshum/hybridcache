@@ -5,9 +5,10 @@ import (
 	"time"
 )
 
+// Cache interface for cache adaptor
 type Cache interface {
 	// Get value by key that prioritize quick access over freshness
-	Get(key string) ([]byte, error)
+	Get(key string) (value []byte, err error)
 
 	// Fetch the freshest value with its remaining ttl by key
 	Fetch(key string) (value []byte, ttl time.Duration, err error)
@@ -22,9 +23,9 @@ type Cache interface {
 	Race(key string, fn func() ([]byte, error), timeout time.Duration) ([]byte, error)
 }
 
-// ErrNotFound ErrNotFund where result not found
+// ErrNotFound result not found
 var ErrNotFound = errors.New("hybridcache: not found")
 
-// ErrNoCache denote value should not be cached as an error value,
-// which does not result an error
+// ErrNoCache denotes result should not be cached,
+// does not result an error to the endpoint
 var ErrNoCache = errors.New("hybridcache: no cache")
