@@ -30,12 +30,15 @@ func TestFunc_DoBytes(t *testing.T) {
 }
 
 func TestFunc_Do_Concurrent(t *testing.T) {
-	DoTestFuncDoConcurrent("Memory", t, NewMemory(10, int64(10<<20), -1))
-	//DoTestFuncDoConcurrent("Redis", t, createRedisCache()) // todo fix redis test
+	DoTestFuncDoConcurrent(
+		"Memory", t, NewMemory(10, int64(10<<20), -1),
+		10, 10, time.Millisecond*100)
+	DoTestFuncDoConcurrent(
+		"Redis", t, createRedisCache(), 5, 5, time.Millisecond*300)
 	DoTestFuncDoConcurrent("Hybrid", t, NewHybrid(
 		createRedisCache(),
 		NewMemory(10, int64(10<<20), -1),
-	))
+	), 10, 10, time.Millisecond*100)
 }
 
 func DoTestFuncDoBytes(name string, t *testing.T, c Cache) {
@@ -371,13 +374,11 @@ func DoTestFuncDo(name string, t *testing.T, c Cache) {
 	})
 }
 
-func DoTestFuncDoConcurrent(name string, t *testing.T, c Cache) {
+func DoTestFuncDoConcurrent(name string, t *testing.T, c Cache, m, n int, sleep time.Duration) {
 	t.Run(name+"FuncDoConcurrent", func(t *testing.T) {
 		var (
 			fn        = NewFunc(c, time.Second, time.Second, time.Second*5)
 			ctx       = context.Background()
-			m         = 10
-			n         = 10
 			called    = make(chan int, n*m)
 			responded = make(chan int, n*m)
 		)
@@ -388,7 +389,7 @@ func DoTestFuncDoConcurrent(name string, t *testing.T, c Cache) {
 					g.Go(func() error {
 						var val string
 						if err := fn.Do(ctx, j, func(_ context.Context) (interface{}, error) {
-							time.Sleep(time.Millisecond * 300)
+							time.Sleep(sleep)
 							called <- 1
 							return "foo" + j, nil
 						}, &val); err != nil || val != "foo"+j {
