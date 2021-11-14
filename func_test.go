@@ -23,10 +23,12 @@ func TestFunc_Do(t *testing.T) {
 func TestFunc_DoBytes(t *testing.T) {
 	DoTestFuncDoBytes("Memory", t, NewMemory(10, int64(10<<20), -1))
 	DoTestFuncDoBytes("Redis", t, createRedisCache())
+	time.Sleep(time.Millisecond * 10)
 	DoTestFuncDoBytes("Hybrid", t, NewHybrid(
 		createRedisCache(),
 		NewMemory(10, int64(10<<20), -1),
 	))
+	time.Sleep(time.Millisecond * 10)
 }
 
 func TestFunc_Do_Concurrent(t *testing.T) {
@@ -406,10 +408,10 @@ func DoTestFuncDoConcurrent(name string, t *testing.T, c Cache, m, n int, sleep 
 			t.Error(err)
 		}
 		if len(called) != m {
-			t.Error(len(called), "should not duplicate concurrent calls")
+			t.Errorf(" = %v, want %v", len(called), m)
 		}
 		if len(responded) != m*n {
-			t.Error(len(responded), "should complete response")
+			t.Errorf(" = %v, want %v", len(responded), m*n)
 		}
 	})
 }

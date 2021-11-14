@@ -49,17 +49,23 @@ func TestCache_Common(t *testing.T) {
 }
 
 func TestCache_Race(t *testing.T) {
-	DoTestCacheRace("Memory", t, NewMemory(10, int64(10<<20), -1))
-	//DoTestCacheRace("Redis", t, createRedisCache()) // todo fix redis test
+	DoTestCacheRace(
+		"Memory", t, NewMemory(10, int64(10<<20), -1),
+		10, 10, time.Millisecond*100)
+	DoTestCacheRace(
+		"Redis", t, createRedisCache(), 5, 5, time.Millisecond*300)
+	time.Sleep(time.Millisecond * 10)
 	DoTestCacheRace("Hybrid", t, NewHybrid(
 		createRedisCache(),
 		NewMemory(10, int64(10<<20), time.Minute*1),
-	))
-	// todo fix redis test
-	//DoTestCacheRace("HybridRedis", t, NewHybrid(
-	//	createRedisCache(),
-	//	NewMemory(10, int64(10<<20), time.Nanosecond)),
-	//)
+	), 5, 5, time.Millisecond*300)
+	time.Sleep(time.Millisecond * 10)
+	DoTestCacheRace("HybridRedis", t, NewHybrid(
+		createRedisCache(),
+		NewMemory(10, int64(10<<20), time.Nanosecond)),
+		5, 5, time.Millisecond*300,
+	)
+	time.Sleep(time.Millisecond * 10)
 }
 
 func DoTestCacheCommon(name string, t *testing.T, c Cache) {
@@ -92,11 +98,9 @@ func DoTestCacheCommon(name string, t *testing.T, c Cache) {
 	})
 }
 
-func DoTestCacheRace(name string, t *testing.T, c Cache) {
+func DoTestCacheRace(name string, t *testing.T, c Cache, m, n int, sleep time.Duration) {
 	t.Run(name+"TestRace", func(t *testing.T) {
 		var (
-			m         = 10
-			n         = 10
 			called    = make(chan int, n*m)
 			responded = make(chan int, n*m)
 			g, _      = errgroup.WithContext(context.Background())
@@ -106,8 +110,8 @@ func DoTestCacheRace(name string, t *testing.T, c Cache) {
 				(func(j string) {
 					g.Go(func() error {
 						b, err := c.Race(j, func() ([]byte, error) {
+							time.Sleep(sleep)
 							called <- 1
-							time.Sleep(time.Millisecond * 300)
 							if j == "3" {
 								return []byte(j), ErrNoCache
 							} else if j == "4" {
@@ -116,7 +120,7 @@ func DoTestCacheRace(name string, t *testing.T, c Cache) {
 								return nil, context.DeadlineExceeded
 							}
 							return []byte(j), nil
-						}, time.Second)
+						}, time.Second*5)
 						if j == "3" {
 							if err != ErrNoCache || string(b) != j {
 								t.Error(string(b), err, "error err parsing")
@@ -144,10 +148,11 @@ func DoTestCacheRace(name string, t *testing.T, c Cache) {
 			t.Error(err)
 		}
 		if len(called) != m {
-			t.Error(len(called), "should not duplicate concurrent calls")
+			t.Errorf(" = %v, want %v", len(called), m)
 		}
 		if len(responded) != m*n {
-			t.Error(len(responded), "should complete response")
+			t.Errorf(" = %v, want %v", len(responded), m*n)
 		}
+		time.Sleep(time.Millisecond * 10)
 	})
 }
