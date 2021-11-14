@@ -75,6 +75,17 @@ func DoTestCacheCommon(name string, t *testing.T, c Cache) {
 			t.Error(err, "should value nil and err not found")
 		}
 		time.Sleep(time.Millisecond)
+		if err := c.Set("a", []byte("abc"), time.Second*2046); err != nil {
+			t.Error(err)
+		}
+		time.Sleep(time.Millisecond)
+		if v, err := c.Get("a"); string(v) != "abc" || err == ErrNotFound {
+			t.Error(err, "should value and no error")
+		}
+		if err := c.Del("a"); err != nil {
+			t.Error(err, "should del")
+		}
+		time.Sleep(time.Millisecond)
 		if v, err := c.Get("a"); v != nil || err != ErrNotFound {
 			t.Error(err, "should value nil and err not found")
 		}
@@ -94,6 +105,22 @@ func DoTestCacheCommon(name string, t *testing.T, c Cache) {
 		time.Sleep(time.Millisecond * 100)
 		if v, err := c.Get("a"); v != nil || err != ErrNotFound {
 			t.Error(v, err, "should value nil and err not found")
+		}
+		time.Sleep(time.Millisecond)
+		if err := c.Set("a", []byte("abc"), time.Second*2046); err != nil {
+			t.Error(err)
+		}
+		time.Sleep(time.Millisecond)
+		if err := c.Clear(); err != nil {
+			t.Error(err, "should clear")
+		}
+		time.Sleep(time.Millisecond)
+		if v, err := c.Get("a"); v != nil || err != ErrNotFound {
+			t.Error(err, "should value nil and err not found")
+		}
+		time.Sleep(time.Millisecond)
+		if err := c.Close(); err != nil {
+			t.Error(err, "error closing cache")
 		}
 	})
 }
@@ -153,6 +180,8 @@ func DoTestCacheRace(name string, t *testing.T, c Cache, m, n int, sleep time.Du
 		if len(responded) != m*n {
 			t.Errorf(" = %v, want %v", len(responded), m*n)
 		}
-		time.Sleep(time.Millisecond * 10)
+		if err := c.Close(); err != nil {
+			t.Error(err, "error closing cache")
+		}
 	})
 }

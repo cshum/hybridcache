@@ -201,6 +201,9 @@ func DoTestFuncDoBytes(name string, t *testing.T, c Cache) {
 				time.Sleep(tt.sleep)
 			})
 		}
+		if err := c.Close(); err != nil {
+			t.Error(err, "error closing cache")
+		}
 	})
 }
 
@@ -373,6 +376,9 @@ func DoTestFuncDo(name string, t *testing.T, c Cache) {
 				time.Sleep(tt.sleep)
 			})
 		}
+		if err := c.Close(); err != nil {
+			t.Error(err, "error closing cache")
+		}
 	})
 }
 
@@ -412,6 +418,9 @@ func DoTestFuncDoConcurrent(name string, t *testing.T, c Cache, m, n int, sleep 
 		}
 		if len(responded) != m*n {
 			t.Errorf(" = %v, want %v", len(responded), m*n)
+		}
+		if err := c.Close(); err != nil {
+			t.Error(err, "error closing cache")
 		}
 	})
 }

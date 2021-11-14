@@ -106,6 +106,32 @@ func (c *Redis) Set(key string, value []byte, ttl time.Duration) error {
 	return nil
 }
 
+func (c *Redis) Del(keys ...string) error {
+	var keyArgs []interface{}
+	for _, key := range keys {
+		keyArgs = append(keyArgs, c.Prefix+key)
+	}
+	var conn = c.Pool.Get()
+	defer conn.Close()
+	if _, err := conn.Do("DEL", keyArgs...); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Redis) Clear() error {
+	var conn = c.Pool.Get()
+	defer conn.Close()
+	if _, err := conn.Do("FLUSHDB"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Redis) Close() error {
+	return c.Pool.Close()
+}
+
 func (c *Redis) Race(
 	key string, fn func() ([]byte, error), timeout time.Duration,
 ) (value []byte, err error) {

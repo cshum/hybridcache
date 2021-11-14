@@ -21,6 +21,15 @@ type Cache interface {
 	// If a duplicate comes in, the duplicate caller waits for the
 	// original to complete and receives the same results.
 	Race(key string, fn func() ([]byte, error), timeout time.Duration) ([]byte, error)
+
+	// Del deletes items from the cache by keys
+	Del(keys ...string) error
+
+	// Clear the cache
+	Clear() error
+
+	// Close releases the resources used by the cache
+	Close() error
 }
 
 // ErrNotFound result not found

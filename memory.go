@@ -59,6 +59,23 @@ func (c *Memory) Set(key string, value []byte, ttl time.Duration) error {
 	return nil
 }
 
+func (c *Memory) Del(keys ...string) error {
+	for _, key := range keys {
+		c.Cache.Del(key)
+	}
+	return nil
+}
+
+func (c *Memory) Clear() error {
+	c.Cache.Clear()
+	return nil
+}
+
+func (c *Memory) Close() error {
+	c.Cache.Close()
+	return nil
+}
+
 func (c *Memory) Race(
 	key string, fn func() ([]byte, error), _ time.Duration,
 ) ([]byte, error) {

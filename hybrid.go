@@ -48,6 +48,27 @@ func (c *Hybrid) Set(key string, value []byte, ttl time.Duration) error {
 	return c.Upstream.Set(key, value, ttl)
 }
 
+func (c *Hybrid) Del(keys ...string) error {
+	if err := c.Downstream.Del(keys...); err != nil {
+		return err
+	}
+	return c.Upstream.Del(keys...)
+}
+
+func (c *Hybrid) Clear() error {
+	if err := c.Downstream.Clear(); err != nil {
+		return err
+	}
+	return c.Upstream.Clear()
+}
+
+func (c *Hybrid) Close() error {
+	if err := c.Downstream.Close(); err != nil {
+		return err
+	}
+	return c.Upstream.Close()
+}
+
 func (c *Hybrid) Race(
 	key string, fn func() ([]byte, error), timeout time.Duration,
 ) ([]byte, error) {
