@@ -22,25 +22,30 @@ type HTTP struct {
 	TTL time.Duration
 
 	// RequestKey function generates string key from incoming request
+	//
 	// by default request URL is used as key
 	RequestKey func(*http.Request) string
 
 	// AcceptRequest optional function determine request should be handled
+	//
 	// by default only GET requests are handled
 	AcceptRequest func(*http.Request) bool
 
 	// AcceptResponse function determine response should be cached
+	//
 	// by default only status code < 400 response are cached
 	AcceptResponse func(*http.Response) bool
 
 	// ErrorHandler function handles errors
-	// by default context deadline exceeded result 408 error, or 400 error for anything else
+	//
+	// by default context deadline will result 408 error, 400 error for anything else
 	ErrorHandler func(http.ResponseWriter, *http.Request, error)
 }
 
 // NewHTTP creates cache HTTP middleware client with options:
-// waitFor request timeout, freshFor timeout for next refresh,
-// ttl cache timeout
+//	waitFor request timeout,
+//	freshFor fresh duration until next refresh,
+//	ttl cache time-to-live
 func NewHTTP(c Cache, waitFor, freshFor, ttl time.Duration) *HTTP {
 	return &HTTP{
 		Cache:    c,

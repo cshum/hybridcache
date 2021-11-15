@@ -28,6 +28,7 @@ type Redis struct {
 	DelayFunc func(tries int) time.Duration
 
 	// SuppressionTTL ttl of value being kept for Race suppression
+	//
 	// default to 2 seconds. Should be a value larger than maximum DelayFunc
 	// but smaller than minimum FreshFor duration
 	SuppressionTTL time.Duration
@@ -111,10 +112,12 @@ func (c *Redis) Del(keys ...string) error {
 	for _, key := range keys {
 		keyArgs = append(keyArgs, c.Prefix+key)
 	}
-	var conn = c.Pool.Get()
-	defer conn.Close()
-	if _, err := conn.Do("DEL", keyArgs...); err != nil {
-		return err
+	if len(keyArgs) > 0 {
+		var conn = c.Pool.Get()
+		defer conn.Close()
+		if _, err := conn.Do("DEL", keyArgs...); err != nil {
+			return err
+		}
 	}
 	return nil
 }

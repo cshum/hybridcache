@@ -27,8 +27,9 @@ type Func struct {
 }
 
 // NewFunc creates cache function client with options:
-// waitFor execution timeout, freshFor timeout for next refresh,
-// ttl cache timeout
+//	waitFor execution timeout,
+//	freshFor fresh duration until next refresh,
+//	ttl cache time-to-live
 func NewFunc(c Cache, waitFor, freshFor, ttl time.Duration) *Func {
 	return &Func{
 		Cache:    c,
@@ -39,6 +40,7 @@ func NewFunc(c Cache, waitFor, freshFor, ttl time.Duration) *Func {
 }
 
 // Do wraps and returns the result of the given function value pointed to by v.
+//
 // fn to return error ErrNoCache tells client not to cache the result
 // but will not result an error
 func (f Func) Do(
@@ -73,7 +75,8 @@ func (f Func) Do(
 	return
 }
 
-// DoBytes wraps and returns the bytes result of the given function
+// DoBytes wraps and returns the bytes result of the given function.
+//
 // fn to return error ErrNoCache tells client not to cache the result
 // but will not result an error
 func (f Func) DoBytes(
