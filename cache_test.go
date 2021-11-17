@@ -60,12 +60,6 @@ func TestCache_Race(t *testing.T) {
 		NewMemory(10, int64(10<<20), time.Minute*1),
 	), 5, 5, time.Millisecond*300)
 	time.Sleep(time.Millisecond * 10)
-	DoTestCacheRace("HybridRedis", t, NewHybrid(
-		createRedisCache(),
-		NewMemory(10, int64(10<<20), time.Nanosecond)),
-		5, 5, time.Millisecond*300,
-	)
-	time.Sleep(time.Millisecond * 10)
 }
 
 func DoTestCacheCommon(name string, t *testing.T, c Cache) {
@@ -139,7 +133,9 @@ func DoTestCacheRace(name string, t *testing.T, c Cache, m, n int, sleep time.Du
 						b, err := c.Race(j, func() ([]byte, error) {
 							time.Sleep(sleep)
 							called <- 1
-							if j == "3" {
+							if j == "2" {
+								return nil, nil
+							} else if j == "3" {
 								return []byte(j), ErrNoCache
 							} else if j == "4" {
 								return nil, ErrNotFound
@@ -148,7 +144,11 @@ func DoTestCacheRace(name string, t *testing.T, c Cache, m, n int, sleep time.Du
 							}
 							return []byte(j), nil
 						}, time.Second*5)
-						if j == "3" {
+						if j == "2" {
+							if err != nil || b != nil {
+								t.Error(b, err, "expected nil")
+							}
+						} else if j == "3" {
 							if err != ErrNoCache || string(b) != j {
 								t.Error(string(b), err, "error err parsing")
 							}

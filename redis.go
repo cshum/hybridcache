@@ -152,8 +152,7 @@ func (c *Redis) Race(
 		if e != nil {
 			// if redis upstream failed, handle directly
 			// instead of crashing downstream consumers
-			value, err = fn()
-			return
+			return fn()
 		}
 		if locked {
 			value, err = fn()
@@ -161,7 +160,7 @@ func (c *Redis) Race(
 				err = e
 			}
 			return
-		} else if len(resp) > 1 {
+		} else if len(resp) > 1 || resp[0] != '1' {
 			if ok, v, e := c.parseRaceResp(resp); ok {
 				value = v
 				err = e
