@@ -3,8 +3,10 @@ package cache
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"github.com/vmihailenco/msgpack/v5"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
@@ -122,13 +124,13 @@ func (c *Redis) Del(keys ...string) error {
 	return nil
 }
 
-func (c *Redis) Clear() error {
-	var conn = c.Pool.Get()
-	defer conn.Close()
-	if _, err := conn.Do("FLUSHDB"); err != nil {
-		return err
-	}
-	return nil
+func (c *Redis) Clear() (err error) {
+	timeout := time.Minute * 10
+	_, err = c.Race("!clear!", func() (b []byte, err error) {
+		err = c.delByPattern(c.Prefix+"*", timeout)
+		return
+	}, timeout)
+	return
 }
 
 func (c *Redis) Close() error {
@@ -143,12 +145,12 @@ func (c *Redis) Race(
 	}
 	var (
 		retries     int
+		lockKey     = c.lockPrefix() + key
 		ctx, cancel = context.WithTimeout(context.Background(), timeout)
 	)
 	defer cancel()
-	key = c.lockKey(key)
 	for {
-		resp, locked, e := c.lock(key, timeout)
+		resp, locked, e := c.lock(lockKey, timeout)
 		if e != nil {
 			// if redis upstream failed, handle directly
 			// instead of crashing downstream consumers
@@ -156,7 +158,7 @@ func (c *Redis) Race(
 		}
 		if locked {
 			value, err = fn()
-			if e := c.setRaceResp(key, value, err); e != nil {
+			if e := c.setRaceResp(lockKey, value, err); e != nil {
 				err = e
 			}
 			return
@@ -173,6 +175,44 @@ func (c *Redis) Race(
 			return
 		}
 	}
+}
+
+func (c *Redis) delByPattern(pattern string, timeout time.Duration) (err error) {
+	var conn = c.Pool.Get()
+	defer conn.Close()
+	var (
+		iter       = 0
+		n          = 1000
+		lockPrefix = c.lockPrefix()
+		start      = time.Now()
+	)
+	for {
+		var arr []interface{}
+		if arr, err = redis.Values(conn.Do("SCAN", iter, "MATCH", pattern, "COUNT", n)); err != nil {
+			return err
+		}
+		iter, _ = redis.Int(arr[0], nil)
+		var keys, _ = redis.Strings(arr[1], nil)
+		var delKeys []string
+		for _, key := range keys {
+			if strings.HasPrefix(key, lockPrefix) {
+				continue // should skip delete lock keys
+			}
+			delKeys = append(delKeys, key)
+		}
+		if len(delKeys) > 0 {
+			if _, err = conn.Do("DEL", redis.Args{}.AddFlat(delKeys)...); err != nil {
+				return err
+			}
+		}
+		if iter == 0 {
+			break
+		}
+		if time.Since(start) > timeout {
+			return errors.New("timeout")
+		}
+	}
+	return
 }
 
 func (c *Redis) lock(
@@ -229,11 +269,11 @@ func (c *Redis) parseRaceResp(resp []byte) (ok bool, value []byte, err error) {
 	return
 }
 
-func (c *Redis) lockKey(key string) string {
+func (c *Redis) lockPrefix() string {
 	if c.LockPrefix != "" {
-		return c.LockPrefix + key
+		return c.LockPrefix
 	}
-	return defaultLockPrefix + key
+	return defaultLockPrefix
 }
 
 func (c *Redis) delayFunc(retries int) time.Duration {

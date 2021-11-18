@@ -14,6 +14,7 @@ import (
 )
 
 var errCustomTest = errors.New("custom test error")
+var redisCnt int
 
 func createRedisCache() (c *Redis) {
 	c = NewRedis(&redis.Pool{
@@ -25,13 +26,16 @@ func createRedisCache() (c *Redis) {
 		return time.Microsecond
 	}
 	c.SuppressionTTL = time.Millisecond * 10
-	c.Prefix = fmt.Sprintf("!%d!", rand.Int())
+	if redisCnt > 0 {
+		c.Prefix = fmt.Sprintf("!%d!", rand.Int())
+	}
 	c.ErrorMapper = func(err error) error {
 		if err.Error() == "custom test error" {
 			return errCustomTest
 		}
 		return nil
 	}
+	redisCnt++
 	return
 }
 
