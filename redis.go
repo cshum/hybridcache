@@ -127,7 +127,7 @@ func (c *Redis) Del(keys ...string) error {
 func (c *Redis) Clear() (err error) {
 	timeout := time.Minute * 10
 	_, err = c.Race("!clear!", func() (b []byte, err error) {
-		err = c.delByPattern(c.Prefix+"*", timeout)
+		err = c.delByPattern(c.Prefix+"*", 5000, timeout)
 		return
 	}, timeout)
 	return
@@ -177,12 +177,11 @@ func (c *Redis) Race(
 	}
 }
 
-func (c *Redis) delByPattern(pattern string, timeout time.Duration) (err error) {
+func (c *Redis) delByPattern(pattern string, n int, timeout time.Duration) (err error) {
 	var conn = c.Pool.Get()
 	defer conn.Close()
 	var (
 		iter       = 0
-		n          = 1000
 		lockPrefix = c.lockPrefix()
 		start      = time.Now()
 	)
