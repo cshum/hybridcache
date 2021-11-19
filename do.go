@@ -13,13 +13,13 @@ func do(
 	fn func(context.Context) (*payload, error),
 	waitFor, freshFor, ttl time.Duration,
 ) (p *payload, err error) {
-	if v, err_ := parse(c.Get(key)); err_ == nil {
+	if v, e := parse(c.Get(key)); e == nil {
 		p = v
 		if v.NeedRefresh() {
 			ctx = DetachContext(ctx)
 			go func() {
-				if b, _, err_ := c.Fetch(key); err_ == nil {
-					if v, err_ := parse(b, nil); err_ == nil {
+				if b, _, e := c.Fetch(key); e == nil {
+					if v, e := parse(b, nil); e == nil {
 						if !v.NeedRefresh() {
 							return
 						}

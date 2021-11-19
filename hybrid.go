@@ -19,7 +19,7 @@ func NewHybrid(upstream, downstream Cache) *Hybrid {
 }
 
 func (c *Hybrid) Get(key string) (value []byte, err error) {
-	if val, err_ := c.Downstream.Get(key); err_ == nil {
+	if val, e := c.Downstream.Get(key); e == nil {
 		value = val
 		return
 	}
