@@ -36,6 +36,7 @@ func NewMemory(maxItems, maxSize int64, maxTTL time.Duration) *Memory {
 	}
 }
 
+// Get implements the Get method
 func (c *Memory) Get(key string) ([]byte, error) {
 	if res, ok := c.Cache.Get(key); ok {
 		return res.([]byte), nil
@@ -43,6 +44,7 @@ func (c *Memory) Get(key string) ([]byte, error) {
 	return nil, ErrNotFound
 }
 
+// Fetch get value and remaining ttl by key
 func (c *Memory) Fetch(key string) (value []byte, ttl time.Duration, err error) {
 	if value, err = c.Get(key); err != nil {
 		return
@@ -51,6 +53,7 @@ func (c *Memory) Fetch(key string) (value []byte, ttl time.Duration, err error) 
 	return
 }
 
+// Set implements the Set method
 func (c *Memory) Set(key string, value []byte, ttl time.Duration) error {
 	if c.MaxTTL > 0 && ttl > c.MaxTTL {
 		ttl = c.MaxTTL
@@ -59,6 +62,7 @@ func (c *Memory) Set(key string, value []byte, ttl time.Duration) error {
 	return nil
 }
 
+// Del implements the Del method
 func (c *Memory) Del(keys ...string) error {
 	for _, key := range keys {
 		c.Cache.Del(key)
@@ -66,16 +70,19 @@ func (c *Memory) Del(keys ...string) error {
 	return nil
 }
 
+// Clear implements the Clear method
 func (c *Memory) Clear() error {
 	c.Cache.Clear()
 	return nil
 }
 
+// Close implements the Close method
 func (c *Memory) Close() error {
 	c.Cache.Close()
 	return nil
 }
 
+// Race implements the Race method using singleflight
 func (c *Memory) Race(
 	key string, fn func() ([]byte, error), _ time.Duration,
 ) ([]byte, error) {

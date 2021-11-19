@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// Func cache client that wraps arbitrary functions
 type Func struct {
 	// Cache adapter
 	Cache Cache
@@ -101,15 +102,13 @@ func (f Func) DoBytes(
 func (f Func) marshal(v interface{}) (b []byte, err error) {
 	if f.Marshal != nil {
 		return f.Marshal(v)
-	} else {
-		return msgpack.Marshal(v)
 	}
+	return msgpack.Marshal(v)
 }
 
 func (f Func) unmarshal(b []byte, v interface{}) (err error) {
 	if f.Unmarshal != nil {
 		return f.Unmarshal(b, v)
-	} else {
-		return msgpack.Unmarshal(b, v)
 	}
+	return msgpack.Unmarshal(b, v)
 }

@@ -64,6 +64,7 @@ func NewRedis(pool *redis.Pool) *Redis {
 	}
 }
 
+// Get implements the Get method
 func (c *Redis) Get(key string) (res []byte, err error) {
 	var conn = c.Pool.Get()
 	defer conn.Close()
@@ -74,6 +75,7 @@ func (c *Redis) Get(key string) (res []byte, err error) {
 	return
 }
 
+// Fetch get value and remaining ttl by key
 func (c *Redis) Fetch(key string) (value []byte, ttl time.Duration, err error) {
 	var conn = c.Pool.Get()
 	defer conn.Close()
@@ -100,6 +102,7 @@ func (c *Redis) Fetch(key string) (value []byte, ttl time.Duration, err error) {
 	return
 }
 
+// Set implements the Set method
 func (c *Redis) Set(key string, value []byte, ttl time.Duration) error {
 	var conn = c.Pool.Get()
 	defer conn.Close()
@@ -109,6 +112,7 @@ func (c *Redis) Set(key string, value []byte, ttl time.Duration) error {
 	return nil
 }
 
+// Del implements the Del method
 func (c *Redis) Del(keys ...string) error {
 	var keyArgs []interface{}
 	for _, key := range keys {
@@ -124,6 +128,7 @@ func (c *Redis) Del(keys ...string) error {
 	return nil
 }
 
+// Clear implements the Clear method by SCAN keys under prefix and batched DEL
 func (c *Redis) Clear() (err error) {
 	timeout := time.Minute * 10
 	_, err = c.Race("!clear!", func() (b []byte, err error) {
@@ -133,10 +138,12 @@ func (c *Redis) Clear() (err error) {
 	return
 }
 
+// Close implements the Close method
 func (c *Redis) Close() error {
 	return c.Pool.Close()
 }
 
+// Race implements the Race method using SEX NX
 func (c *Redis) Race(
 	key string, fn func() ([]byte, error), timeout time.Duration,
 ) (value []byte, err error) {

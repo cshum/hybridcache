@@ -29,9 +29,8 @@ func do(
 			}()
 		}
 		return
-	} else {
-		return doCall(ctx, c, key, fn, waitFor, freshFor, ttl)
 	}
+	return doCall(ctx, c, key, fn, waitFor, freshFor, ttl)
 }
 
 func doCall(

@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// HTTP cache client as an HTTP middleware
 type HTTP struct {
 	// Cache adapter
 	Cache Cache

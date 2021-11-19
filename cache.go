@@ -25,7 +25,7 @@ type Cache interface {
 	// Close releases the resources used by the cache
 	Close() error
 
-	// Race executes and returns the results and error of the given function once
+	// Race executes and returns the given function once
 	// under specified timeout, suppressing multiple calls of the same key.
 	// If a duplicate comes in, the duplicate caller waits for the
 	// original to complete and receives the same results.

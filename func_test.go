@@ -211,10 +211,10 @@ func DoTestFuncDo(name string, t *testing.T, c Cache) {
 	t.Run(name+"FuncDo", func(t *testing.T) {
 		var (
 			fn     = NewFunc(c, time.Millisecond*50, time.Millisecond*50, time.Second*2)
-			fnJson = NewFunc(c, time.Millisecond*50, time.Millisecond*50, time.Second*2)
+			fnJSON = NewFunc(c, time.Millisecond*50, time.Millisecond*50, time.Second*2)
 		)
-		fnJson.Marshal = json.Marshal
-		fnJson.Unmarshal = json.Unmarshal
+		fnJSON.Marshal = json.Marshal
+		fnJSON.Unmarshal = json.Unmarshal
 		tests := []struct {
 			name         string
 			key          string
@@ -273,7 +273,7 @@ func DoTestFuncDo(name string, t *testing.T, c Cache) {
 			{
 				name: "cached value corrupted should be treated as cache miss",
 				key:  "a",
-				c:    fnJson,
+				c:    fnJSON,
 				fn: func(ctx context.Context) (interface{}, error) {
 					return "asdf", nil
 				},
