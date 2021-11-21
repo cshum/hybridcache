@@ -176,8 +176,8 @@ func (c *Redis) Race(
 				return
 			}
 		}
-		time.Sleep(c.delayFunc(retries))
 		retries++
+		time.Sleep(c.delayFunc(retries))
 		if err = ctx.Err(); err != nil {
 			return
 		}
