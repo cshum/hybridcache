@@ -41,6 +41,9 @@ type HTTP struct {
 	//
 	// by default context deadline will result 408 error, 400 error for anything else
 	ErrorHandler func(http.ResponseWriter, *http.Request, error)
+
+	// AsyncSet calls cache Set in goroutine
+	AsyncSet bool
 }
 
 // NewHTTP creates cache HTTP middleware client with options:
@@ -99,7 +102,7 @@ func (h HTTP) Handler(next http.Handler) http.Handler {
 				err = ErrNoCache
 			}
 			return
-		}, h.WaitFor, h.FreshFor, h.TTL); err != nil || p == nil {
+		}, h.WaitFor, h.FreshFor, h.TTL, h.AsyncSet); err != nil || p == nil {
 			if h.ErrorHandler != nil {
 				h.ErrorHandler(w, r, err)
 			} else if err == context.DeadlineExceeded {

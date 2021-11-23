@@ -12,6 +12,7 @@ func do(
 	c Cache, key string,
 	fn func(context.Context) (*payload, error),
 	waitFor, freshFor, ttl time.Duration,
+	asyncSet bool,
 ) (p *payload, err error) {
 	if v, e := parse(c.Get(key)); e == nil {
 		p = v
@@ -25,12 +26,12 @@ func do(
 						}
 					}
 				}
-				_, _ = doCall(ctx, c, key, fn, waitFor, freshFor, ttl)
+				_, _ = doCall(ctx, c, key, fn, waitFor, freshFor, ttl, asyncSet)
 			}()
 		}
 		return
 	}
-	return doCall(ctx, c, key, fn, waitFor, freshFor, ttl)
+	return doCall(ctx, c, key, fn, waitFor, freshFor, ttl, asyncSet)
 }
 
 func doCall(
@@ -38,6 +39,7 @@ func doCall(
 	c Cache, key string,
 	fn func(context.Context) (*payload, error),
 	waitFor, freshFor, ttl time.Duration,
+	asyncSet bool,
 ) (*payload, error) {
 	return parse(c.Race(key, func() ([]byte, error) {
 		return callWithTimeout(ctx, func(ctx context.Context) ([]byte, error) {
@@ -59,7 +61,13 @@ func doCall(
 			if err := ctx.Err(); err != nil {
 				return nil, err
 			}
-			_ = c.Set(key, b, ttl)
+			if asyncSet {
+				go func() {
+					_ = c.Set(key, b, ttl)
+				}()
+			} else {
+				_ = c.Set(key, b, ttl)
+			}
 			return b, nil
 		}, waitFor)
 	}, waitFor))
