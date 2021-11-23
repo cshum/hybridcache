@@ -25,7 +25,6 @@ func createRedisCache() (c *Redis) {
 	c.DelayFunc = func(_ int) time.Duration {
 		return time.Microsecond
 	}
-	c.SuppressionTTL = time.Millisecond * 10
 	if redisCnt > 0 {
 		c.Prefix = fmt.Sprintf("!%d!", rand.Int())
 	}
@@ -147,7 +146,7 @@ func DoTestCacheRace(name string, t *testing.T, c Cache, m, n int, sleep time.Du
 								return nil, context.DeadlineExceeded
 							}
 							return []byte(j), nil
-						}, time.Second*5)
+						}, time.Second*5, time.Millisecond*10)
 						if j == "2" {
 							if err != nil || b != nil {
 								t.Error(b, err, "expected nil")

@@ -41,6 +41,10 @@ func doCall(
 	waitFor, freshFor, ttl time.Duration,
 	asyncSet bool,
 ) (*payload, error) {
+	suppressionTTL := time.Second
+	if suppressionTTL > freshFor {
+		suppressionTTL = freshFor
+	}
 	return parse(c.Race(key, func() ([]byte, error) {
 		return callWithTimeout(ctx, func(ctx context.Context) ([]byte, error) {
 			p, err := fn(ctx)
@@ -70,7 +74,7 @@ func doCall(
 			}
 			return b, nil
 		}, waitFor)
-	}, waitFor))
+	}, waitFor, suppressionTTL))
 }
 
 func parse(val []byte, e error) (p *payload, err error) {

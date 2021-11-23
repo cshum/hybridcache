@@ -78,10 +78,10 @@ func (c *Hybrid) Close() error {
 
 // Race implements the Race method by first acquiring downstream and then upstream
 func (c *Hybrid) Race(
-	key string, fn func() ([]byte, error), timeout time.Duration,
+	key string, fn func() ([]byte, error), timeout, ttl time.Duration,
 ) ([]byte, error) {
 	start := time.Now()
 	return c.Downstream.Race(key, func() ([]byte, error) {
-		return c.Upstream.Race(key, fn, timeout-time.Since(start))
-	}, timeout)
+		return c.Upstream.Race(key, fn, timeout-time.Since(start), ttl)
+	}, timeout, ttl)
 }

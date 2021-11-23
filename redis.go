@@ -29,12 +29,6 @@ type Redis struct {
 	// DelayFunc is used to decide the amount of time to wait between lock retries.
 	DelayFunc func(tries int) time.Duration
 
-	// SuppressionTTL ttl of value being kept for Race suppression
-	//
-	// default to 2 seconds. Should be a value larger than maximum DelayFunc
-	// but smaller than minimum FreshFor duration
-	SuppressionTTL time.Duration
-
 	// SkipLock skips redis lock that manages call suppression for Race method,
 	// which result function to be executed immediately.
 	// This will skip the extra cost of redis lock, if you do not need suppression
@@ -45,7 +39,6 @@ type Redis struct {
 const (
 	defaultMinRetryDelayMilliSec = 50
 	defaultMaxRetryDelayMilliSec = 250
-	defaultSuppressionTTL        = time.Second
 	defaultLockPrefix            = "!lock!"
 )
 
@@ -131,10 +124,11 @@ func (c *Redis) Del(keys ...string) error {
 // Clear implements the Clear method by SCAN keys under prefix and batched DEL
 func (c *Redis) Clear() (err error) {
 	timeout := time.Minute * 10
+	ttl := time.Second
 	_, err = c.Race("!clear!", func() (b []byte, err error) {
 		err = c.delByPattern(c.Prefix+"*", 5000, timeout)
 		return
-	}, timeout)
+	}, timeout, ttl)
 	return
 }
 
@@ -145,7 +139,7 @@ func (c *Redis) Close() error {
 
 // Race implements the Race method using SEX NX
 func (c *Redis) Race(
-	key string, fn func() ([]byte, error), timeout time.Duration,
+	key string, fn func() ([]byte, error), timeout, ttl time.Duration,
 ) (value []byte, err error) {
 	if c.SkipLock {
 		return fn()
@@ -165,7 +159,7 @@ func (c *Redis) Race(
 		}
 		if locked {
 			value, err = fn()
-			if e := c.setRaceResp(lockKey, value, err); e != nil {
+			if e := c.setRaceResp(lockKey, value, err, ttl); e != nil {
 				err = e
 			}
 			return
@@ -244,15 +238,11 @@ func (c *Redis) lock(
 	return
 }
 
-func (c *Redis) setRaceResp(key string, value []byte, e error) (err error) {
+func (c *Redis) setRaceResp(key string, value []byte, e error, ttl time.Duration) (err error) {
 	var (
-		p   = &lockRes{Res: value, Err: e}
-		b   []byte
-		ttl = defaultSuppressionTTL
+		p = &lockRes{Res: value, Err: e}
+		b []byte
 	)
-	if c.SuppressionTTL > 0 {
-		ttl = c.SuppressionTTL
-	}
 	if b, err = msgpack.Marshal(p); err != nil {
 		return
 	}
