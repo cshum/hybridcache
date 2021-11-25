@@ -39,7 +39,7 @@ func doCall(
 	fn func(context.Context) (*payload, error),
 	waitFor, freshFor, ttl time.Duration,
 ) (*payload, error) {
-	suppressionTTL := time.Second
+	suppressionTTL := time.Second * 2
 	if suppressionTTL > freshFor {
 		suppressionTTL = freshFor
 	}
