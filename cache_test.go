@@ -40,25 +40,29 @@ func createRedisCache() (c *Redis) {
 
 func TestCache_Common(t *testing.T) {
 	DoTestCacheCommon("Memory", t, NewMemory(10, int64(10<<20), -1))
+	DoTestCacheCommon("HybridMemory", t, NewHybrid(
+		NewMemory(10, int64(10<<20), time.Minute*1),
+		NewMemory(10, int64(10<<20), time.Minute*1),
+	))
 	DoTestCacheCommon("Redis", t, createRedisCache())
-	DoTestCacheCommon("Hybrid", t, NewHybrid(
+	DoTestCacheCommon("HybridRedis", t, NewHybrid(
 		createRedisCache(),
 		NewMemory(10, int64(10<<20), time.Minute*1),
 	))
-	DoTestCacheCommon("HybridRedis", t, NewHybrid(
-		createRedisCache(),
-		NewMemory(10, int64(10<<20), time.Nanosecond)),
-	)
 }
 
 func TestCache_Race(t *testing.T) {
 	DoTestCacheRace(
 		"Memory", t, NewMemory(10, int64(10<<20), -1),
 		10, 10, time.Millisecond*100)
+	DoTestCacheRace("HybridMemory", t, NewHybrid(
+		NewMemory(10, int64(10<<20), time.Minute*1),
+		NewMemory(10, int64(10<<20), time.Minute*1),
+	), 10, 10, time.Millisecond*100)
 	DoTestCacheRace(
 		"Redis", t, createRedisCache(), 5, 5, time.Millisecond*300)
 	time.Sleep(time.Millisecond * 10)
-	DoTestCacheRace("Hybrid", t, NewHybrid(
+	DoTestCacheRace("HybridRedis", t, NewHybrid(
 		createRedisCache(),
 		NewMemory(10, int64(10<<20), time.Minute*1),
 	), 5, 5, time.Millisecond*300)
