@@ -144,7 +144,7 @@ func (c *Redis) Close() error {
 
 // Race implements the Race method using SEX NX
 func (c *Redis) Race(
-	key string, fn func() ([]byte, error), timeout, ttl time.Duration,
+	key string, fn func() ([]byte, error), waitFor, ttl time.Duration,
 ) (value []byte, err error) {
 	if c.SkipLock {
 		return fn()
@@ -152,11 +152,11 @@ func (c *Redis) Race(
 	var (
 		retries     int
 		lockKey     = c.lockPrefix() + key
-		ctx, cancel = context.WithTimeout(context.Background(), timeout)
+		ctx, cancel = context.WithTimeout(context.Background(), waitFor)
 	)
 	defer cancel()
 	for {
-		resp, locked, e := c.lock(lockKey, timeout)
+		resp, locked, e := c.lock(lockKey, waitFor)
 		if e != nil {
 			// if redis upstream failed, handle directly
 			// instead of crashing downstream consumers

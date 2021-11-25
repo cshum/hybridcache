@@ -29,7 +29,7 @@ type Cache interface {
 	// under specified timeout, suppressing multiple calls of the same key.
 	// If a duplicate comes in, the duplicate caller waits for the
 	// original to complete and receives the same results.
-	Race(key string, fn func() ([]byte, error), timeout, ttl time.Duration) ([]byte, error)
+	Race(key string, fn func() ([]byte, error), waitFor, ttl time.Duration) ([]byte, error)
 }
 
 // ErrNotFound result not found
