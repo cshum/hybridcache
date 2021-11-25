@@ -25,9 +25,6 @@ type Func struct {
 
 	// custom Unmarshal function, default msgpack
 	Unmarshal func([]byte, interface{}) error
-
-	// AsyncSet calls cache Set in goroutine
-	AsyncSet bool
 }
 
 // NewFunc creates cache function client with options:
@@ -64,12 +61,12 @@ func (f Func) Do(
 		return newPayload(b), err
 	}
 	var p *payload
-	if p, err = do(ctx, f.Cache, key, pfn, f.WaitFor, f.FreshFor, f.TTL, f.AsyncSet); err != nil {
+	if p, err = do(ctx, f.Cache, key, pfn, f.WaitFor, f.FreshFor, f.TTL); err != nil {
 		return
 	}
 	if err = f.unmarshal(p.Value, v); err != nil {
 		// cache payload valid but value corrupted, get live and try once more
-		if p, err = doCall(ctx, f.Cache, key, pfn, f.WaitFor, f.FreshFor, f.TTL, f.AsyncSet); err != nil {
+		if p, err = doCall(ctx, f.Cache, key, pfn, f.WaitFor, f.FreshFor, f.TTL); err != nil {
 			return
 		}
 		if err = f.unmarshal(p.Value, v); err != nil {
@@ -95,7 +92,7 @@ func (f Func) DoBytes(
 		}
 		p = newPayload(b)
 		return
-	}, f.WaitFor, f.FreshFor, f.TTL, f.AsyncSet); err != nil {
+	}, f.WaitFor, f.FreshFor, f.TTL); err != nil {
 		return
 	}
 	value = p.Value

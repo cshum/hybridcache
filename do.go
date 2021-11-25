@@ -12,7 +12,6 @@ func do(
 	c Cache, key string,
 	fn func(context.Context) (*payload, error),
 	waitFor, freshFor, ttl time.Duration,
-	asyncSet bool,
 ) (p *payload, err error) {
 	if v, e := parse(c.Get(key)); e == nil {
 		p = v
@@ -26,12 +25,12 @@ func do(
 						}
 					}
 				}
-				_, _ = doCall(ctx, c, key, fn, waitFor, freshFor, ttl, asyncSet)
+				_, _ = doCall(ctx, c, key, fn, waitFor, freshFor, ttl)
 			}()
 		}
 		return
 	}
-	return doCall(ctx, c, key, fn, waitFor, freshFor, ttl, asyncSet)
+	return doCall(ctx, c, key, fn, waitFor, freshFor, ttl)
 }
 
 func doCall(
@@ -39,7 +38,6 @@ func doCall(
 	c Cache, key string,
 	fn func(context.Context) (*payload, error),
 	waitFor, freshFor, ttl time.Duration,
-	asyncSet bool,
 ) (*payload, error) {
 	suppressionTTL := time.Second
 	if suppressionTTL > freshFor {
@@ -65,12 +63,13 @@ func doCall(
 			if err := ctx.Err(); err != nil {
 				return nil, err
 			}
-			if asyncSet {
+			if IsDetached(ctx) {
+				_ = c.Set(key, b, ttl)
+			} else {
+				// set in goroutine if not detached
 				go func() {
 					_ = c.Set(key, b, ttl)
 				}()
-			} else {
-				_ = c.Set(key, b, ttl)
 			}
 			return b, nil
 		}, waitFor)
