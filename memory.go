@@ -39,7 +39,10 @@ func NewMemory(maxItems, maxSize int64, maxTTL time.Duration) *Memory {
 // Get implements the Get method
 func (c *Memory) Get(key string) ([]byte, error) {
 	if res, ok := c.Cache.Get(key); ok {
-		return res.([]byte), nil
+		if res != nil {
+			return res.([]byte), nil
+		}
+		return nil, nil
 	}
 	return nil, ErrNotFound
 }

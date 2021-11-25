@@ -124,11 +124,16 @@ func (c *Redis) Del(keys ...string) error {
 // Clear implements the Clear method by SCAN keys under prefix and batched DEL
 func (c *Redis) Clear() (err error) {
 	timeout := time.Minute * 10
-	ttl := time.Second
+	ttl := time.Millisecond * 300
+	start := time.Now()
 	_, err = c.Race("!clear!", func() (b []byte, err error) {
 		err = c.delByPattern(c.Prefix+"*", 5000, timeout)
 		return
 	}, timeout, ttl)
+	// make sure elapsed time > suppression ttl
+	if elapsed := time.Since(start); ttl > elapsed {
+		time.Sleep(ttl - elapsed)
+	}
 	return
 }
 
@@ -171,7 +176,12 @@ func (c *Redis) Race(
 			}
 		}
 		retries++
-		time.Sleep(c.delayFunc(retries))
+		delay := c.delayFunc(retries)
+		if maxDelay := ttl - defaultMinRetryDelayMilliSec; delay > maxDelay {
+			// delay should be within ttl
+			delay = maxDelay
+		}
+		time.Sleep(delay)
 		if err = ctx.Err(); err != nil {
 			return
 		}
