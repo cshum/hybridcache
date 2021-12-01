@@ -3,6 +3,7 @@ package cache
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -24,18 +25,26 @@ func sortQueryString(URL *url.URL) {
 	URL.RawQuery = params.Encode()
 }
 
-func TestHTTP_Handler(t *testing.T) {
+type roundTripper struct {
+	Handler http.Handler
+}
+
+func (t roundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+	w := httptest.NewRecorder()
+	t.Handler.ServeHTTP(w, r)
+	return w.Result(), nil
+}
+
+func TestHTTP(t *testing.T) {
 	counter := 0
 	httpTestHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(fmt.Sprintf("value %v", counter)))
 	})
-
-	c := NewHTTP(NewMemory(10, int64(10<<20), -1), time.Second, time.Minute, time.Hour)
-	c.RequestKey = func(r *http.Request) string {
+	requestKey := func(r *http.Request) string {
 		sortQueryString(r.URL)
 		return r.URL.String()
 	}
-	c.AcceptResponse = func(res *http.Response) bool {
+	acceptResponse := func(res *http.Response) bool {
 		body, _ := ioutil.ReadAll(res.Body)
 		defer res.Body.Close()
 		reader := ioutil.NopCloser(bytes.NewBuffer(body))
@@ -46,7 +55,15 @@ func TestHTTP_Handler(t *testing.T) {
 		return true
 	}
 
-	handler := c.Handler(httpTestHandler)
+	c1 := NewHTTP(NewMemory(10, int64(10<<20), -1), time.Second, time.Minute, time.Hour)
+	c1.RequestKey = requestKey
+	c1.AcceptResponse = acceptResponse
+	handler := c1.Handler(httpTestHandler)
+
+	c2 := NewHTTP(NewMemory(10, int64(10<<20), -1), time.Second, time.Minute, time.Hour)
+	c2.RequestKey = requestKey
+	c2.AcceptResponse = acceptResponse
+	transport := c2.RoundTripper(roundTripper{Handler: httpTestHandler})
 
 	tests := []struct {
 		name     string
@@ -120,8 +137,8 @@ func TestHTTP_Handler(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			counter++
+		counter++
+		t.Run("Handler_"+tt.name, func(t *testing.T) {
 			var r *http.Request
 			var err error
 
@@ -142,6 +159,36 @@ func TestHTTP_Handler(t *testing.T) {
 			if !reflect.DeepEqual(w.Body.String(), tt.wantBody) {
 				t.Errorf(" = %v, want %v", w.Body.String(), tt.wantBody)
 			}
+
+			time.Sleep(time.Millisecond)
+		})
+		t.Run("RoundTripper_"+tt.name, func(t *testing.T) {
+			var r *http.Request
+			var err error
+
+			reader := bytes.NewReader([]byte{})
+			r, err = http.NewRequest(tt.method, tt.url, reader)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			res, err := transport.RoundTrip(r)
+			if err != nil {
+				t.Error(err)
+			}
+			body, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Error(err)
+			}
+
+			if !reflect.DeepEqual(res.StatusCode, tt.wantCode) {
+				t.Errorf(" = %v, want %v", res.StatusCode, tt.wantCode)
+				return
+			}
+			if !reflect.DeepEqual(string(body), tt.wantBody) {
+				t.Errorf(" = %v, want %v", string(body), tt.wantBody)
+			}
+
 			time.Sleep(time.Millisecond)
 		})
 	}

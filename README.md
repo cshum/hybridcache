@@ -19,11 +19,13 @@ hybridCache := cache.NewHybrid(redisCache, memoryCache)
 The hybrid combination allows Redis upstream coordinate across multiple servers, while Memory downstream ensures minimal network I/O which brings the fastest response time. 
 Shall the Redis upstream failed, memory downstream will still operate independently without service disruption.
 ```go
-// wrap function call with hybrid cache
+// cache function client
 cacheFunc := cache.NewFunc(hybridCache, time.Seconds*20, time.Minute, time.Hour)
 // 20 seconds execution timeout, 1 minute fresh-for timeout, 1 hour ttl
 var items []*Items
 someKey := fmt.Sprintf("key-%d", id)
+
+// wrap function call with hybrid cache
 if err := cacheFunc.Do(ctx, someKey, func(ctx context.Context) (interface{}, error) {
 	return someHeavyOperations(ctx, id)
 }, &items); err != nil {
@@ -33,17 +35,20 @@ for _, item := range items {
 	...
 }
 
-
-// use as an HTTP middleware
-cacheHandler := cache.NewHTTP(hybridCache, time.Seconds*30, time.Minute, time.Hour*12).Handler
+// cache http client
+cacheHTTP := cache.NewHTTP(hybridCache, time.Seconds*30, time.Minute, time.Hour*12)
 // 30 seconds request timeout, 1 minute fresh-for timeout, 12 hour ttl
 // setting a high ttl will enable "always online" in case of service disruption.
 // content will lazy refresh in background (goroutine) after fresh-for timeout
 
+// use as an HTTP middleware
 r := mux.NewRouter()
-r.Use(cacheHandler)
+r.Use(cacheHTTP.Handler)
 r.Mount("/", myWebServices)
 http.ListenAndServe(":3001", r)
+
+// wraps a http.RoundTripper
+cachedTransport := cacheHTTP.RoundTripper(http.DefaultTransport)
 ```
 A simple function wrapper or HTTP middleware gives you under the hood:
 

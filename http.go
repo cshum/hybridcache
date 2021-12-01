@@ -1,7 +1,10 @@
 package cache
 
 import (
+	"bytes"
 	"context"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -41,6 +44,9 @@ type HTTP struct {
 	//
 	// by default context deadline will result 408 error, 400 error for anything else
 	ErrorHandler func(http.ResponseWriter, *http.Request, error)
+
+	// Transport wraps a http.RoundTripper for cache
+	Transport http.RoundTripper
 }
 
 // NewHTTP creates cache HTTP middleware client with options:
@@ -115,4 +121,69 @@ func (h HTTP) Handler(next http.Handler) http.Handler {
 		w.WriteHeader(p.StatusCode)
 		_, _ = w.Write(p.Value)
 	})
+}
+
+// RoundTripper wraps and returns a http.RoundTripper for cache
+func (h HTTP) RoundTripper(transport http.RoundTripper) http.RoundTripper {
+	h.Transport = transport
+	return h
+}
+
+// RoundTrip implements http.RoundTripper
+func (h HTTP) RoundTrip(r *http.Request) (*http.Response, error) {
+	if h.Transport == nil {
+		return nil, ErrNotFound
+	}
+	var (
+		key = r.URL.String()
+		ctx = r.Context()
+	)
+	if h.AcceptRequest != nil && !h.AcceptRequest(r) {
+		return h.Transport.RoundTrip(r)
+	}
+	if h.RequestKey != nil {
+		key = h.RequestKey(r)
+	}
+	p, err := do(ctx, h.Cache, key, func(ctx context.Context) (p *payload, err error) {
+		var (
+			rr   = r.WithContext(ctx)
+			res  *http.Response
+			body []byte
+		)
+		if res, err = h.Transport.RoundTrip(rr); err != nil {
+			return
+		}
+		if body, err = io.ReadAll(res.Body); err != nil {
+			return
+		}
+		res.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+		p = newPayload(body)
+		p.Header = res.Header
+		p.StatusCode = res.StatusCode
+		if h.AcceptResponse != nil && !h.AcceptResponse(res) {
+			err = ErrNoCache
+		}
+		return
+	}, h.WaitFor, h.FreshFor, h.TTL)
+	if err != nil {
+		return nil, err
+	}
+	if p == nil {
+		return nil, ErrNotFound
+	}
+	header := make(http.Header, 0)
+	for k, v := range p.Header {
+		header.Set(k, strings.Join(v, ","))
+	}
+	return &http.Response{
+		Status:        http.StatusText(p.StatusCode),
+		StatusCode:    p.StatusCode,
+		Proto:         "HTTP/1.1",
+		ProtoMajor:    1,
+		ProtoMinor:    1,
+		Body:          ioutil.NopCloser(bytes.NewBuffer(p.Value)),
+		ContentLength: int64(len(p.Value)),
+		Request:       r,
+		Header:        header,
+	}, nil
 }
