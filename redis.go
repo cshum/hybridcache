@@ -2,7 +2,6 @@ package cache
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"github.com/vmihailenco/msgpack/v5"
 	"math/rand"
@@ -22,9 +21,6 @@ type Redis struct {
 
 	// LockPrefix prefix of lock key, default "!lock!"
 	LockPrefix string
-
-	// ErrorMapper maps errors to its corresponding value during unmarshal
-	ErrorMapper func(error) error
 
 	// DelayFunc is used to decide the amount of time to wait between lock retries.
 	DelayFunc func(tries int) time.Duration
@@ -47,8 +43,6 @@ type lockRes struct {
 	Res      []byte
 	Err      error
 }
-
-var errMapper = getErrorMapper()
 
 // NewRedis creates redis cache from redigo redis pool
 func NewRedis(pool *redis.Pool) *Redis {
@@ -271,7 +265,7 @@ func (c *Redis) parseRaceResp(resp []byte) (ok bool, value []byte, err error) {
 	}
 	ok = true
 	value = p.Res
-	err = c.errorMapper(p.Err)
+	err = p.Err
 	return
 }
 
@@ -297,38 +291,4 @@ func toMilliSec(d time.Duration) int64 {
 
 func fromMilliSec(pTTL int64) time.Duration {
 	return time.Duration(pTTL) * time.Millisecond
-}
-
-func (c *Redis) errorMapper(err error) error {
-	if err == nil {
-		return nil
-	}
-	if c.ErrorMapper != nil {
-		if e := c.ErrorMapper(err); e != err && e != nil {
-			return e
-		}
-	}
-	if e, ok := errMapper[err.Error()]; ok {
-		return e
-	}
-	return err
-}
-
-func getErrorMapper() map[string]error {
-	// map common errors to their original
-	errMapper := map[string]error{}
-	for _, err := range []error{
-		ErrNotFound,
-		ErrNoCache,
-		context.Canceled,
-		context.DeadlineExceeded,
-		sql.ErrNoRows,
-		sql.ErrTxDone,
-		sql.ErrConnDone,
-		redis.ErrNil,
-		redis.ErrPoolExhausted,
-	} {
-		errMapper[err.Error()] = err
-	}
-	return errMapper
 }

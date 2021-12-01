@@ -196,28 +196,6 @@ func DoTestFuncDoBytes(name string, t *testing.T, c Cache) {
 				wantErr: "booommm",
 				sleep:   time.Millisecond,
 			},
-			{
-				name: "should return same custom error",
-				key:  "err",
-				c:    fn1,
-				fn: func(ctx context.Context) ([]byte, error) {
-					return nil, errCustomTest
-				},
-				wantVal:      nil,
-				wantErrExact: errCustomTest,
-				sleep:        time.Millisecond,
-			},
-			{
-				name: "should return same custom error with val",
-				key:  "errrr",
-				c:    fn1,
-				fn: func(ctx context.Context) ([]byte, error) {
-					return []byte("abc"), errCustomTest
-				},
-				wantVal:      []byte("abc"),
-				wantErrExact: errCustomTest,
-				sleep:        time.Millisecond,
-			},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -392,28 +370,6 @@ func DoTestFuncDo(name string, t *testing.T, c Cache) {
 				wantVal: "",
 				wantErr: "booommm",
 				sleep:   time.Millisecond,
-			},
-			{
-				name: "should return same custom error",
-				key:  "err",
-				c:    fn,
-				fn: func(ctx context.Context) (interface{}, error) {
-					return nil, errCustomTest
-				},
-				wantVal:      "",
-				wantErrExact: errCustomTest,
-				sleep:        time.Millisecond,
-			},
-			{
-				name: "should return same custom error with val",
-				key:  "errrrr",
-				c:    fn,
-				fn: func(ctx context.Context) (interface{}, error) {
-					return "abc", errCustomTest
-				},
-				wantVal:      "abc",
-				wantErrExact: errCustomTest,
-				sleep:        time.Millisecond,
 			},
 		}
 		for _, tt := range tests {

@@ -2,7 +2,6 @@ package cache
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"golang.org/x/sync/errgroup"
 	"math/rand"
@@ -13,7 +12,6 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
-var errCustomTest = errors.New("custom test error")
 var redisCnt int
 
 func createRedisCache() (c *Redis) {
@@ -27,12 +25,6 @@ func createRedisCache() (c *Redis) {
 	}
 	if redisCnt > 0 {
 		c.Prefix = fmt.Sprintf("!%d!", rand.Int())
-	}
-	c.ErrorMapper = func(err error) error {
-		if err.Error() == "custom test error" {
-			return errCustomTest
-		}
-		return nil
 	}
 	redisCnt++
 	return

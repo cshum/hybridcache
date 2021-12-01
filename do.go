@@ -82,6 +82,7 @@ func doCall(
 }
 
 func parse(val []byte, e error) (p *payload, err error) {
+	e = wrapError(e)
 	if len(val) == 0 {
 		if e != nil {
 			err = e
@@ -145,4 +146,31 @@ func callWithTimeout(
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
+}
+
+var errMap = (func() map[string]error {
+	m := map[string]error{}
+	for _, err := range []error{
+		ErrNoCache,
+		ErrNotFound,
+		context.Canceled,
+		context.DeadlineExceeded,
+	} {
+		m[err.Error()] = err
+	}
+	return m
+})()
+
+// wrapError convert serialized errors back to its original
+func wrapError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if err == ErrNoCache || err == ErrNotFound {
+		return err
+	}
+	if e, ok := errMap[err.Error()]; ok {
+		return e
+	}
+	return err
 }
