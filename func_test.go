@@ -201,9 +201,20 @@ func DoTestFuncDoBytes(name string, t *testing.T, c Cache) {
 				key:  "err",
 				c:    fn1,
 				fn: func(ctx context.Context) ([]byte, error) {
-					return []byte("abc"), errCustomTest
+					return nil, errCustomTest
 				},
 				wantVal:      nil,
+				wantErrExact: errCustomTest,
+				sleep:        time.Millisecond,
+			},
+			{
+				name: "should return same custom error with val",
+				key:  "err",
+				c:    fn1,
+				fn: func(ctx context.Context) ([]byte, error) {
+					return []byte("abc"), errCustomTest
+				},
+				wantVal:      []byte("abc"),
 				wantErrExact: errCustomTest,
 				sleep:        time.Millisecond,
 			},
@@ -387,9 +398,20 @@ func DoTestFuncDo(name string, t *testing.T, c Cache) {
 				key:  "err",
 				c:    fn,
 				fn: func(ctx context.Context) (interface{}, error) {
-					return "abc", errCustomTest
+					return nil, errCustomTest
 				},
 				wantVal:      "",
+				wantErrExact: errCustomTest,
+				sleep:        time.Millisecond,
+			},
+			{
+				name: "should return same custom error with val",
+				key:  "err",
+				c:    fn,
+				fn: func(ctx context.Context) (interface{}, error) {
+					return "abc", errCustomTest
+				},
+				wantVal:      "abc",
 				wantErrExact: errCustomTest,
 				sleep:        time.Millisecond,
 			},

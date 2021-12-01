@@ -82,19 +82,24 @@ func doCall(
 }
 
 func parse(val []byte, e error) (p *payload, err error) {
-	if e != nil {
-		err = e
+	if len(val) == 0 {
+		if e != nil {
+			err = e
+		} else {
+			err = ErrNotFound
+		}
 		return
 	}
 	p = &payload{}
-	if err = msgpack.Unmarshal(val, p); err != nil {
-		return
-	}
-	if !p.IsValid() {
-		err = ErrNotFound
+	if err = msgpack.Unmarshal(val, p); err != nil || !p.IsValid() {
+		if e != nil {
+			err = e
+		} else {
+			err = ErrNotFound
+		}
 		p = nil
-		return
 	}
+	err = e
 	return
 }
 
