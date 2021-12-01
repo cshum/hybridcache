@@ -47,8 +47,13 @@ func doCall(
 		return callWithTimeout(ctx, func(ctx context.Context) ([]byte, error) {
 			p, err := fn(ctx)
 			if err != nil {
-				if p != nil && err == ErrNoCache {
-					return unparse(p)
+				if p != nil {
+					if err == ErrNoCache {
+						return unparse(p)
+					}
+					if b, e := unparse(p); e == nil {
+						return b, err
+					}
 				}
 				return nil, err
 			}

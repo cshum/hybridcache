@@ -22,9 +22,9 @@ Shall the Redis upstream failed, memory downstream will still operate independen
 // cache function client
 cacheFunc := cache.NewFunc(hybridCache, time.Seconds*20, time.Minute, time.Hour)
 // 20 seconds execution timeout, 1 minute fresh-for timeout, 1 hour ttl
+
 var items []*Items
 someKey := fmt.Sprintf("key-%d", id)
-
 // wrap function call with hybrid cache
 if err := cacheFunc.Do(ctx, someKey, func(ctx context.Context) (interface{}, error) {
 	return someHeavyOperations(ctx, id)
@@ -41,8 +41,8 @@ cacheHTTP := cache.NewHTTP(hybridCache, time.Seconds*30, time.Minute, time.Hour*
 // setting a high ttl will enable "always online" in case of service disruption.
 // content will lazy refresh in background (goroutine) after fresh-for timeout
 
-// use as an HTTP middleware
 r := mux.NewRouter()
+// use as an HTTP middleware
 r.Use(cacheHTTP.Handler)
 r.Mount("/", myWebServices)
 http.ListenAndServe(":3001", r)

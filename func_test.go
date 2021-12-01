@@ -133,6 +133,18 @@ func DoTestFuncDoBytes(name string, t *testing.T, c Cache) {
 				sleep:   time.Millisecond,
 			},
 			{
+				name: "should return val and expected error",
+				key:  "b",
+				c:    fn1,
+				fn: func(ctx context.Context) ([]byte, error) {
+					return []byte("bb"), errors.New("expected error")
+				},
+				wantVal: []byte("bb"),
+				noErr:   false,
+				wantErr: "expected error",
+				sleep:   time.Millisecond,
+			},
+			{
 				name: "ErrNoCache handling",
 				key:  "c",
 				c:    fn1,
@@ -303,6 +315,18 @@ func DoTestFuncDo(name string, t *testing.T, c Cache) {
 					return nil, errors.New("expected error")
 				},
 				noErr:   false,
+				wantErr: "expected error",
+				sleep:   time.Millisecond,
+			},
+			{
+				name: "should return val and expected error",
+				key:  "b",
+				c:    fn,
+				fn: func(ctx context.Context) (interface{}, error) {
+					return "bbb", errors.New("expected error")
+				},
+				noErr:   false,
+				wantVal: "bbb",
 				wantErr: "expected error",
 				sleep:   time.Millisecond,
 			},

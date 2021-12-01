@@ -51,9 +51,6 @@ func (f Func) Do(
 ) (err error) {
 	var pfn = func(ctx context.Context) (*payload, error) {
 		v, err := fn(ctx)
-		if err != nil && err != ErrNoCache {
-			return nil, err
-		}
 		b, e := f.marshal(v)
 		if e != nil {
 			return nil, e
@@ -61,10 +58,14 @@ func (f Func) Do(
 		return newPayload(b), err
 	}
 	var p *payload
-	if p, err = do(ctx, f.Cache, key, pfn, f.WaitFor, f.FreshFor, f.TTL); err != nil {
+	if p, err = do(ctx, f.Cache, key, pfn, f.WaitFor, f.FreshFor, f.TTL); p == nil {
 		return
 	}
-	if err = f.unmarshal(p.Value, v); err != nil {
+	if e := f.unmarshal(p.Value, v); e != nil {
+		// if already err then leave it
+		if err != nil {
+			return
+		}
 		// cache payload valid but value corrupted, get live and try once more
 		if p, err = doCall(ctx, f.Cache, key, pfn, f.WaitFor, f.FreshFor, f.TTL); err != nil {
 			return
@@ -85,14 +86,10 @@ func (f Func) DoBytes(
 	fn func(context.Context) ([]byte, error),
 ) (value []byte, err error) {
 	var p *payload
-	if p, err = do(ctx, f.Cache, key, func(ctx context.Context) (p *payload, err error) {
-		var b []byte
-		if b, err = fn(ctx); err != nil && err != ErrNoCache {
-			return
-		}
-		p = newPayload(b)
-		return
-	}, f.WaitFor, f.FreshFor, f.TTL); err != nil {
+	if p, err = do(ctx, f.Cache, key, func(ctx context.Context) (*payload, error) {
+		b, err := fn(ctx)
+		return newPayload(b), err
+	}, f.WaitFor, f.FreshFor, f.TTL); p == nil {
 		return
 	}
 	value = p.Value
