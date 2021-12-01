@@ -134,7 +134,7 @@ func DoTestFuncDoBytes(name string, t *testing.T, c Cache) {
 			},
 			{
 				name: "should return val and expected error",
-				key:  "b",
+				key:  "bbbbb",
 				c:    fn1,
 				fn: func(ctx context.Context) ([]byte, error) {
 					return []byte("bb"), errors.New("expected error")
@@ -209,7 +209,7 @@ func DoTestFuncDoBytes(name string, t *testing.T, c Cache) {
 			},
 			{
 				name: "should return same custom error with val",
-				key:  "err",
+				key:  "errrr",
 				c:    fn1,
 				fn: func(ctx context.Context) ([]byte, error) {
 					return []byte("abc"), errCustomTest
@@ -331,7 +331,7 @@ func DoTestFuncDo(name string, t *testing.T, c Cache) {
 			},
 			{
 				name: "should return val and expected error",
-				key:  "b",
+				key:  "bbbbb",
 				c:    fn,
 				fn: func(ctx context.Context) (interface{}, error) {
 					return "bbb", errors.New("expected error")
@@ -406,7 +406,7 @@ func DoTestFuncDo(name string, t *testing.T, c Cache) {
 			},
 			{
 				name: "should return same custom error with val",
-				key:  "err",
+				key:  "errrrr",
 				c:    fn,
 				fn: func(ctx context.Context) (interface{}, error) {
 					return "abc", errCustomTest
