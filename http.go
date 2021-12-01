@@ -45,7 +45,7 @@ type HTTP struct {
 	// by default context deadline will result 408 error, 400 error for anything else
 	ErrorHandler func(http.ResponseWriter, *http.Request, error)
 
-	// Transport wraps a http.RoundTripper for cache
+	// Transport the http.RoundTripper to wrap. Defaults to http.DefaultTransport
 	Transport http.RoundTripper
 }
 
@@ -132,7 +132,7 @@ func (h HTTP) RoundTripper(transport http.RoundTripper) http.RoundTripper {
 // RoundTrip implements http.RoundTripper
 func (h HTTP) RoundTrip(r *http.Request) (*http.Response, error) {
 	if h.Transport == nil {
-		return nil, ErrNotFound
+		h.Transport = http.DefaultTransport
 	}
 	var (
 		key = r.URL.String()
