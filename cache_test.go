@@ -148,15 +148,15 @@ func DoTestCacheRace(name string, t *testing.T, c Cache, m, n int, sleep time.Du
 								t.Error(b, err, "expected nil")
 							}
 						} else if j == "3" {
-							if err != ErrNoCache || string(b) != j {
+							if err == nil || err.Error() != ErrNoCache.Error() || string(b) != j {
 								t.Error(string(b), err, "error err parsing")
 							}
 						} else if j == "4" {
-							if err != ErrNotFound || b != nil {
+							if err == nil || err.Error() != ErrNotFound.Error() || b != nil {
 								t.Error(string(b), err, "error err parsing")
 							}
 						} else if j == "5" {
-							if err != context.DeadlineExceeded || b != nil {
+							if err == nil || err.Error() != context.DeadlineExceeded.Error() || b != nil {
 								t.Error(string(b), err, "error err parsing")
 							}
 						} else {
