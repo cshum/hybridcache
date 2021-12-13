@@ -87,15 +87,11 @@ func (c *Memory) Close() error {
 
 // Race implements the Race method using singleflight
 func (c *Memory) Race(
-	key string, fn func() ([]byte, error), _, ttl time.Duration,
+	key string, fn func() ([]byte, error), _, _ time.Duration,
 ) ([]byte, error) {
 	v, err, _ := c.g.Do(key, func() (interface{}, error) {
 		return fn()
 	})
-	go func() {
-		time.Sleep(ttl)
-		c.g.Forget(key)
-	}()
 	if v != nil {
 		return v.([]byte), err
 	}
