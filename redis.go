@@ -85,7 +85,7 @@ func (c *Redis) Fetch(key string) (value []byte, ttl time.Duration, err error) {
 	if pTTL, err = redis.Int64(conn.Receive()); err != nil {
 		return
 	}
-	ttl = fromMilliSec(pTTL)
+	ttl = time.Duration(pTTL) * time.Millisecond
 	return
 }
 
@@ -93,7 +93,7 @@ func (c *Redis) Fetch(key string) (value []byte, ttl time.Duration, err error) {
 func (c *Redis) Set(key string, value []byte, ttl time.Duration) error {
 	var conn = c.Pool.Get()
 	defer conn.Close()
-	if _, err := conn.Do("PSETEX", c.Prefix+key, toMilliSec(ttl), value); err != nil {
+	if _, err := conn.Do("PSETEX", c.Prefix+key, ttl.Milliseconds(), value); err != nil {
 		return err
 	}
 	return nil
@@ -224,7 +224,7 @@ func (c *Redis) lock(
 ) (value []byte, locked bool, err error) {
 	var conn = c.Pool.Get()
 	defer conn.Close()
-	if err = conn.Send("SET", key, "1", "PX", toMilliSec(timeout), "NX"); err != nil {
+	if err = conn.Send("SET", key, "1", "PX", timeout.Milliseconds(), "NX"); err != nil {
 		return
 	}
 	if err = conn.Send("GET", key); err != nil {
@@ -252,7 +252,7 @@ func (c *Redis) setRaceResp(key string, value []byte, e error, ttl time.Duration
 	}
 	var conn = c.Pool.Get()
 	defer conn.Close()
-	if _, err = conn.Do("PSETEX", key, toMilliSec(ttl), b); err != nil {
+	if _, err = conn.Do("PSETEX", key, ttl.Milliseconds(), b); err != nil {
 		return
 	}
 	return
@@ -283,12 +283,4 @@ func (c *Redis) delayFunc(retries int) time.Duration {
 	return time.Duration(rand.Intn(
 		defaultMaxRetryDelayMilliSec-defaultMinRetryDelayMilliSec,
 	)+defaultMinRetryDelayMilliSec) * time.Millisecond
-}
-
-func toMilliSec(d time.Duration) int64 {
-	return int64(d / time.Millisecond)
-}
-
-func fromMilliSec(pTTL int64) time.Duration {
-	return time.Duration(pTTL) * time.Millisecond
 }
